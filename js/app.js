@@ -5,7 +5,7 @@
 // GLOBAL STATE
 // =============================================================================
 
-const APP_VERSION = 'v1.0.1'; // Increment sub-version with each commit
+const APP_VERSION = 'v1.0.2'; // Increment sub-version with each commit
 
 const appState = {
   currentStep: 1,
