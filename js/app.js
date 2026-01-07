@@ -2249,9 +2249,19 @@ async function exportNetworkZIP(network, tier) {
       });
 
       // Extract UTM parameters from generated URL
-      const urlObj = new URL(url);
-      const source = urlObj.searchParams.get('utm_source') || '';
-      const medium = urlObj.searchParams.get('utm_medium') || '';
+      let source = '';
+      let medium = '';
+
+      // Only parse URL if landingURL is valid
+      if (landingURL && landingURL.trim() !== '') {
+        try {
+          const urlObj = new URL(url);
+          source = urlObj.searchParams.get('utm_source') || '';
+          medium = urlObj.searchParams.get('utm_medium') || '';
+        } catch (e) {
+          console.warn('Invalid URL generated:', url, e);
+        }
+      }
 
       // Generate final renamed filename
       const finalName = generateFinalFilename(fileData.fileName, fileData.file.dimensions, campaignName, network);
@@ -2406,9 +2416,19 @@ async function exportAllNetworksZIP() {
           });
 
           // Extract UTM parameters from generated URL
-          const urlObj = new URL(url);
-          const source = urlObj.searchParams.get('utm_source') || '';
-          const medium = urlObj.searchParams.get('utm_medium') || '';
+          let source = '';
+          let medium = '';
+
+          // Only parse URL if landingURL is valid
+          if (landingURL && landingURL.trim() !== '') {
+            try {
+              const urlObj = new URL(url);
+              source = urlObj.searchParams.get('utm_source') || '';
+              medium = urlObj.searchParams.get('utm_medium') || '';
+            } catch (e) {
+              console.warn('Invalid URL generated:', url, e);
+            }
+          }
 
           // Generate final renamed filename
           const finalName = generateFinalFilename(fileData.fileName, fileData.file.dimensions, campaignName, network);
