@@ -1,0 +1,8 @@
+# Python server file
+server.py
+.gitignore
+
+# Claude Code files
+.claude/
+.claude_history
+CLAUDE.md

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Creative Validator</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>🎨 Seznam Creative Validator</h1>
+    <p class="subtitle">Nástroj pro validaci bannerů a jejich automatický export pro reklamní systémy (Adform, SOS, Onegar, Sklik, HP Exclusive)</p>
+
+    <!-- Progress Steps -->
+    <div class="steps">
+      <div class="step active clickable" data-step="1" onclick="handleStepClick(1)">1. Nahrát bannery</div>
+      <div class="step clickable" data-step="2" onclick="handleStepClick(2)">2. Výsledek validace</div>
+      <div class="step clickable" data-step="3" onclick="handleStepClick(3)">3. Nastavení exportu</div>
+      <div class="step clickable" data-step="4" onclick="handleStepClick(4)">4. Vybrat systémy</div>
+      <div class="step clickable" data-step="5" onclick="handleStepClick(5)">5. Export</div>
+    </div>
+
+    <!-- Step 1: Upload Banners -->
+    <div class="section active" id="step1">
+      <h2>Nahrání bannerů</h2>
+
+      <div class="info-box">
+        <strong>📦 Podporované formáty:</strong>
+        <ul>
+          <li>JPG, PNG, GIF</li>
+          <li>ZIP archivy (automaticky rozbalí obrázky)</li>
+          <li>Složky (rekurzivně prohledá všechny obrázky)</li>
+        </ul>
+      </div>
+
+      <div class="upload-zone" id="uploadZone">
+        <div class="upload-icon">📦</div>
+        <div class="upload-text">
+          <strong>Přetáhněte bannery, složky nebo ZIP soubory</strong>
+          <span>nebo klikněte pro výběr</span>
+        </div>
+        <input type="file" id="fileInput" multiple accept=".jpg,.jpeg,.png,.gif,.zip" style="display: none;">
+      </div>
+
+      <div id="uploadProgress" style="display: none;">
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-text" id="progressText">Analyzuji soubory...</div>
+      </div>
+
+      <div id="uploadedFiles"></div>
+
+      <div class="nav-buttons">
+        <button class="btn-primary" id="analyzeBtn" onclick="validateCompatibility()" disabled>Další: Zobrazit kompatibilní systémy →</button>
+      </div>
+    </div>
+
+    <!-- Step 2: Validation Results -->
+    <div class="section" id="step2">
+      <h2>Výsledek validace</h2>
+
+      <div id="networkToggles"></div>
+
+      <div class="nav-buttons">
+        <button class="btn-secondary" onclick="goToStep(1)">← Zpět</button>
+        <button class="btn-primary" id="reviewBtn" onclick="goToStep(3)">Další: Nastavení exportu →</button>
+      </div>
+    </div>
+
+    <!-- Step 3: Export Settings -->
+    <div class="section" id="step3">
+      <h2>Nastavení exportu</h2>
+      <p class="subtitle">Nastavte globální parametry pro export. Jednotlivé bannery můžete upravit v kroku 5.</p>
+
+      <!-- Campaign Settings -->
+      <div style="margin: 20px 0;">
+        <div class="form-group">
+          <label for="campaignName">Název kampaně:</label>
+          <input type="text" id="campaignName" placeholder="např. sluzba-nazev-kampane" oninput="updateExportPreview()" />
+        </div>
+
+        <div class="form-group">
+          <label for="contentName">Content (základní název kreativy):</label>
+          <input type="text" id="contentName" placeholder="např. content" oninput="updateExportPreview()" />
+          <div class="helper-text">Použije se pro utm_content a název banneru</div>
+        </div>
+
+        <div class="form-group">
+          <label for="landingURL">Landing page URL:</label>
+          <input type="text" id="landingURL" placeholder="https://www.seznam.cz/nekonecny" oninput="updateExportPreview()" />
+        </div>
+
+        <!-- Campaign Tier Selection -->
+        <div class="form-group">
+          <label>Tier kampaně:</label>
+          <div style="display: flex; gap: 20px; margin-top: 10px;">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <input type="radio" name="campaignTier" value="HIGH" checked onchange="updateCampaignTier('HIGH')" style="width: 20px; height: 20px;">
+              <span style="font-weight: 600; font-size: 16px;">HIGH Tier</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <input type="radio" name="campaignTier" value="LOW" onchange="updateCampaignTier('LOW')" style="width: 20px; height: 20px;">
+              <span style="font-weight: 600; font-size: 16px;">LOW Tier</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Zbozi.cz Toggle -->
+        <div class="form-group">
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="checkbox" id="zboziToggle" onchange="updateExportPreview()" style="width: 20px; height: 20px;">
+            <span style="font-weight: 600;">Kampaň pro Zboží.cz</span>
+          </label>
+          <div class="helper-text">Speciální pravidla pro kampaně na Zboží.cz</div>
+        </div>
+      </div>
+
+      <!-- URL Preview -->
+      <div id="urlPreview" style="margin: 20px 0; padding: 15px; background: #f9fafb; border-radius: 6px; border: 1px solid #e5e7eb;">
+        <strong style="display: block; margin-bottom: 10px; color: #1f2937;">Náhled URL:</strong>
+        <div id="urlPreviewContent" style="font-size: 13px; color: #6b7280; font-family: monospace; word-break: break-all;">
+          Vyplňte údaje pro zobrazení náhledu URL
+        </div>
+        <div style="margin-top: 10px; font-size: 12px; color: #6b7280; font-style: italic;">
+          💡 Můžete upravit formát, službu a ukotvení pro každý banner v kroku 5
+        </div>
+      </div>
+
+      <div class="nav-buttons">
+        <button class="btn-secondary" onclick="goToStep(2)">← Zpět</button>
+        <button class="btn-primary" onclick="goToStep(4)">Další: Výběr systémů →</button>
+      </div>
+    </div>
+
+    <!-- Step 4: Select Networks -->
+    <div class="section" id="step4">
+      <h2>Výběr systémů</h2>
+      <p class="subtitle">Vyber prosím systém pro přejmenování bannerů a export URL.</p>
+
+      <div id="networkSelection"></div>
+
+      <div class="nav-buttons">
+        <button class="btn-secondary" onclick="goToStep(3)">← Zpět</button>
+        <button class="btn-primary" id="exportBtn" onclick="goToStep(5)">Další: Export →</button>
+      </div>
+    </div>
+
+    <!-- Step 5: Export -->
+    <div class="section" id="step5">
+      <h2>Export bannerů</h2>
+
+      <!-- Export Options Per Network -->
+      <div id="exportNetworks"></div>
+
+      <div class="nav-buttons">
+        <button class="btn-secondary" onclick="goToStep(4)">← Zpět</button>
+        <button class="btn-primary" onclick="location.reload()">Nová validace</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Application Modules (load in order) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="js/specs-rules.js"></script>
+  <script src="js/file-analyzer.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
