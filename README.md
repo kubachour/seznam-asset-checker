@@ -1,39 +1,108 @@
 # Seznam Creative Validator
 
-A client-side tool for validating advertising banners against Seznam network specifications (Adform, SOS, Onegar, Sklik, HP Exclusive).
+Nástroj pro validaci a export reklamních bannerů pro Seznam reklamní systémy (SOS, Onegar, Sklik, Adform, HP Exclusive).
 
-## Features
+## Hlavní funkce
 
-- **Multi-format upload**: Drag-and-drop support for images, folders, and ZIP archives
-- **Automatic validation**: Checks banner dimensions, file sizes, and color spaces against network specs
-- **Smart system detection**: Automatically assigns banners to networks based on folder structure
-- **UTM URL generation**: Creates properly tagged tracking URLs for each network
-- **Export packages**: Generates ZIP files with renamed banners and upload instructions
+### 📤 Nahrávání souborů
+- **Drag & drop**: Přetažení obrázků, složek nebo ZIP archivů
+- **Rekurzivní procházení**: Automatické prohledání všech podsložek
+- **Podporované formáty**: JPG, PNG, GIF
+- **Barevný prostor**: Detekce a validace RGB/CMYK
 
-## Usage
+### ✅ Validace
+- **Automatická kontrola**: Rozměry, velikost souborů, barevný prostor
+- **Inteligentní přiřazení**: Detekce systému podle struktury složek
+- **Tier rozdělení**: Automatická kategorizace LOW/HIGH tier
+- **Podpora Zboží.cz**: Speciální pravidla pro zbožové kampaně
 
-1. Open `index.html` in a web browser
-2. Upload your banner files (supports JPG, PNG, GIF)
-3. Review validation results for each advertising network
-4. Configure campaign settings and select networks
-5. Download export packages with renamed files and tracking URLs
+### 🔗 Generování UTM URL
+- **Seznam tagging standard**: Automatická normalizace (diakritika, mezery)
+- **UTM parametry**: utm_source, utm_medium, utm_campaign, utm_content, utm_term
+- **Zbozi kampaně**: Speciální pravidla pro pozici, datum a službu
+- **Náhled URL**: Živý náhled generovaných URL v kroku 3
 
-## Development
+### 📦 Export
+- **Jednotlivé balíčky**: Export pro každý systém/tier zvlášť
+- **Hromadný export**: Stažení všech systémů najednou v jednom ZIP
+- **Přejmenování souborů**: Automatické přejmenování podle kampaně a systému
+- **XLS soubory**: Export s URL, UTM parametry a metadaty pro každý systém
 
-No build process required - this is a pure vanilla JavaScript application.
+### ⚙️ Konfigurace
+- **Kampaň a content**: Globální nastavení pro všechny bannery
+- **Datum rozsah**: Pro HIGH tier zbožové kampaně
+- **Individuální úpravy**: Formát, služba a ukotvení pro každý banner
+- **Tooltips**: Podrobné informace o pravidlech pojmenování
 
-To run locally:
+## Použití
+
+### 1. Nahrání bannerů (Krok 1)
+Přetáhněte bannery, složky nebo ZIP soubory do upload zóny. Nástroj automaticky:
+- Rozbalí ZIP archivy
+- Prohledá všechny podsložky
+- Analyzuje rozměry a velikosti
+- Zkontroluje barevný prostor
+
+### 2. Výsledek validace (Krok 2)
+Zobrazí kompatibilní systémy pro každý banner s detaily:
+- Počet validních bannerů
+- Počet kampaňových assetů
+- Seznam všech umístění
+- Tooltips s podporovanými formáty
+
+### 3. Nastavení exportu (Krok 3)
+Vyplňte globální parametry:
+- Název kampaně
+- Content (základní název kreativy)
+- Landing page URL
+- Zbozi toggle (volitelné) + datum rozsah
+
+### 4. Výběr systémů (Krok 4)
+Vyberte systémy a bannery pro export:
+- Zaškrtněte požadované systémy
+- Vyberte konkrétní bannery (nebo všechny)
+- Náhled počtu assetů
+
+### 5. Export (Krok 5)
+Stáhněte balíčky:
+- **Jednotlivé**: Každý systém/tier zvlášť
+- **Všechny najednou**: Jeden ZIP se všemi systémy ve složkách
+- Každý balíček obsahuje přejmenované bannery + export.xlsx
+
+## Zbozi.cz kampaně
+
+Pro kampaně na Zboží.cz zaškrtněte toggle v kroku 3. Systém aplikuje speciální pravidla:
+
+**LOW tier:**
+- `utm_campaign`: zbozi_low_{rok}
+- `utm_content`: kampan-content-rozmery (vše pomlčky)
+- `utm_term`: pozice (wallpaper, skyscraper...)
+
+**HIGH tier:**
+- `utm_campaign`: kampan_sluzba_pozice_datum
+- `utm_content`: kampan-content-rozmery (vše pomlčky)
+- `utm_term`: sluzba_pozice
+
+## Vývoj
+
+Čistá JavaScript aplikace bez build procesu. Pro lokální spuštění:
+
 ```bash
 python3 -m http.server 8000
-# or
+# nebo
 npx serve
 ```
 
-Then open http://localhost:8000
+Poté otevřete http://localhost:8000
 
-## Tech Stack
+## Technologie
 
 - Vanilla JavaScript (ES6+)
-- HTML5 File APIs for drag-and-drop
-- JSZip library for ZIP file handling
-- CSS3 for responsive design
+- HTML5 File APIs (drag-and-drop, file reading)
+- JSZip (vytváření ZIP archivů)
+- SheetJS (generování XLS souborů)
+- CSS3 (responzivní design)
+
+## Verzování
+
+Aplikace používá sémantické verzování `v1.0.X` kde X se inkrementuje s každým commitem. Aktuální verze je zobrazena v patičce aplikace.

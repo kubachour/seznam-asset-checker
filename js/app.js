@@ -5,6 +5,8 @@
 // GLOBAL STATE
 // =============================================================================
 
+const APP_VERSION = 'v1.0.1'; // Increment sub-version with each commit
+
 const appState = {
   currentStep: 1,
   uploadedFiles: [], // Array of analyzed file objects
@@ -21,11 +23,84 @@ const appState = {
 };
 
 // =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+/**
+ * Generate tooltip text showing supported banner sizes, KB limits, and naming rules for a network
+ * @param {string} network - Network name (e.g., 'SKLIK', 'SOS', 'ONEGAR')
+ * @returns {string} HTML string for tooltip content
+ */
+function getNetworkTooltip(network) {
+  const specs = CREATIVE_SPECS[network];
+  if (!specs) return '';
+
+  // Build supported formats section
+  const dimensionMap = new Map();
+
+  for (const [key, spec] of Object.entries(specs)) {
+    for (const dim of spec.dimensions) {
+      if (!dimensionMap.has(dim)) {
+        dimensionMap.set(dim, {
+          name: spec.name,
+          maxSize: spec.maxSize,
+          device: spec.device
+        });
+      }
+    }
+  }
+
+  // Sort dimensions by size (width * height)
+  const sortedDims = Array.from(dimensionMap.entries()).sort((a, b) => {
+    const [wa, ha] = a[0].split('x').map(Number);
+    const [wb, hb] = b[0].split('x').map(Number);
+    return (wa * ha) - (wb * hb);
+  });
+
+  // Section 1: Supported formats
+  let tooltip = `━━━ PODPOROVANÉ FORMÁTY ━━━\n`;
+  for (const [dim, info] of sortedDims) {
+    tooltip += `• ${dim} - max ${info.maxSize} KB`;
+    if (info.device) {
+      tooltip += ` (${info.device})`;
+    }
+    tooltip += `\n`;
+  }
+
+  // Section 2: Regular campaign naming rules
+  tooltip += `\n━━━ PRAVIDLA POJMENOVÁNÍ (BĚŽNÉ) ━━━\n`;
+  tooltip += `utm_campaign: služba_nazev-kampane\n`;
+  tooltip += `  Příklad: hp_moje-kampan-2026\n\n`;
+  tooltip += `utm_content: kampan-content_rozmery\n`;
+  tooltip += `  Příklad: moje-kampan-brand_300x250\n\n`;
+  tooltip += `utm_term: banner / kombi / video\n`;
+
+  // Section 3: Zbozi campaign naming rules
+  tooltip += `\n━━━ PRAVIDLA POJMENOVÁNÍ (ZBOŽÍ) ━━━\n`;
+  tooltip += `LOW tier:\n`;
+  tooltip += `  utm_campaign: zbozi_low_rok\n`;
+  tooltip += `  utm_content: kampan-content-rozmery (vše pomlčky!)\n`;
+  tooltip += `  utm_term: pozice (wallpaper, skyscraper...)\n\n`;
+  tooltip += `HIGH tier:\n`;
+  tooltip += `  utm_campaign: kampan_sluzba_pozice_datum\n`;
+  tooltip += `  utm_content: kampan-content-rozmery (vše pomlčky!)\n`;
+  tooltip += `  utm_term: sluzba_pozice\n`;
+
+  return tooltip.trim();
+}
+
+// =============================================================================
 // INITIALIZATION
 // =============================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
   console.log('Creative Validator initialized');
+
+  // Display app version
+  const versionElement = document.getElementById('appVersion');
+  if (versionElement) {
+    versionElement.textContent = APP_VERSION;
+  }
 
   // Setup event listeners
   setupEventListeners();
@@ -189,6 +264,18 @@ function setupEventListeners() {
       }
     });
   }
+
+  // Step 3: Zbozi toggle - show/hide date fields
+  const zboziToggle = document.getElementById('zboziToggle');
+  const zboziDateFields = document.getElementById('zboziDateFields');
+
+  if (zboziToggle && zboziDateFields) {
+    zboziToggle.addEventListener('change', function(e) {
+      zboziDateFields.style.display = e.target.checked ? 'block' : 'none';
+      appState.isZboziCampaign = e.target.checked;
+      updateExportPreview();
+    });
+  }
 }
 
 // =============================================================================
@@ -329,6 +416,133 @@ function updateExportPreview() {
   `;
 }
 
+// =============================================================================
+// UTM TAGGING HELPER FUNCTIONS
+// =============================================================================
+
+/**
+ * Remove diacritics from Czech text
+ * @param {string} text - Text with diacritics
+ * @returns {string} Text without diacritics
+ */
+function removeDiacritics(text) {
+  const diacriticsMap = {
+    'á': 'a', 'Á': 'A', 'č': 'c', 'Č': 'C', 'ď': 'd', 'Ď': 'D',
+    'é': 'e', 'É': 'E', 'ě': 'e', 'Ě': 'E', 'í': 'i', 'Í': 'I',
+    'ň': 'n', 'Ň': 'N', 'ó': 'o', 'Ó': 'O', 'ř': 'r', 'Ř': 'R',
+    'š': 's', 'Š': 'S', 'ť': 't', 'Ť': 'T', 'ú': 'u', 'Ú': 'U',
+    'ů': 'u', 'Ů': 'U', 'ý': 'y', 'Ý': 'Y', 'ž': 'z', 'Ž': 'Z'
+  };
+
+  return text.replace(/[áÁčČďĎéÉěĚíÍňŇóÓřŘšŠťŤúÚůŮýÝžŽ]/g, match => diacriticsMap[match] || match);
+}
+
+/**
+ * Normalize text for UTM parameters according to Seznam rules:
+ * - Remove diacritics
+ * - Convert to lowercase
+ * - Replace spaces with hyphens
+ * @param {string} text - Text to normalize
+ * @returns {string} Normalized text
+ */
+function normalizeUTMText(text) {
+  if (!text) return '';
+
+  return removeDiacritics(text)
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-');  // Replace spaces with hyphens
+}
+
+/**
+ * Build utm_campaign parameter according to Seznam tagging rules:
+ * Rule 2: service_campaign-name (e.g., televizeseznam_revir-jaro-2023)
+ * Rule 4: If service name already in campaign, omit service prefix (e.g., seznammenu-podzim-2023)
+ *
+ * @param {string} service - Service name (already normalized, e.g., "televizeseznam", "hp")
+ * @param {string} campaignName - Campaign name (may contain diacritics, spaces)
+ * @returns {string} utm_campaign value
+ */
+function buildUTMCampaign(service, campaignName) {
+  const normalizedCampaign = normalizeUTMText(campaignName);
+  const normalizedService = service ? service.toLowerCase() : '';
+
+  // Rule 4: Check if service name is already in the campaign name
+  if (normalizedService && normalizedCampaign.includes(normalizedService)) {
+    // Service already in campaign name, return just the campaign
+    return normalizedCampaign;
+  }
+
+  // Rule 2: service_campaign-name format
+  if (normalizedService && normalizedCampaign) {
+    return `${normalizedService}_${normalizedCampaign}`;
+  }
+
+  // Fallback: just return normalized campaign
+  return normalizedCampaign;
+}
+
+/**
+ * Map banner dimensions to position name for zbozi campaigns
+ * @param {string} dimensions - Banner dimensions (e.g., "300x250")
+ * @returns {string} Position name (e.g., "sponzor-sluzby")
+ */
+function dimensionToPosition(dimensions) {
+  const dimensionMap = {
+    '480x300': 'wallpaper',
+    '970x210': 'leaderboard',
+    '300x250': 'sponzor-sluzby',
+    '970x310': 'rectangle',
+    '300x600': 'skyscraper',
+    '300x300': 'mobilni-square',
+    '480x480': 'mobilni-square-premium',
+    '1200x628': 'kombi',
+    '1200x1200': 'kombi',
+    '728x90': 'leaderboard-middle',
+    '320x100': 'mobilni-leaderboard',
+    '160x600': 'skyscraper-sticky'
+  };
+
+  return dimensionMap[dimensions] || 'banner';
+}
+
+/**
+ * Format date range for zbozi HIGH tier campaigns
+ * @param {string} startDate - Start date in YYYY-MM-DD format
+ * @param {string} endDate - End date in YYYY-MM-DD format
+ * @returns {string} Formatted date range (e.g., "1.1.-31.1.2026")
+ */
+function formatDateRange(startDate, endDate) {
+  if (!startDate || !endDate) return '';
+
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  const startDay = start.getDate();
+  const startMonth = start.getMonth() + 1;
+  const endDay = end.getDate();
+  const endMonth = end.getMonth() + 1;
+  const year = end.getFullYear();
+
+  return `${startDay}.${startMonth}.-${endDay}.${endMonth}.${year}`;
+}
+
+/**
+ * Extract year from campaign name or use current year
+ * @param {string} campaignName - Campaign name (may contain year)
+ * @returns {string} Year (4 digits)
+ */
+function extractYear(campaignName) {
+  // Try to find 4-digit year in campaign name
+  const yearMatch = campaignName.match(/20\d{2}/);
+  if (yearMatch) {
+    return yearMatch[0];
+  }
+
+  // Fallback to current year
+  return new Date().getFullYear().toString();
+}
+
 /**
  * Generate banner URL based on system and parameters
  * @param {Object} params - URL parameters
@@ -348,9 +562,13 @@ function generateBannerURL(params) {
     isZbozi
   } = params;
 
+  // Normalize campaign and content names according to Seznam tagging rules
+  const normalizedCampaign = normalizeUTMText(campaignName);
+  const normalizedContent = normalizeUTMText(contentName);
+
   let utm_source = '';
   let utm_medium = '';
-  let utm_campaign = campaignName;
+  let utm_campaign = '';
   let utm_content = '';
   let utm_term = '';
 
@@ -358,28 +576,71 @@ function generateBannerURL(params) {
   if (network === 'SOS') {
     utm_source = 'seznam_sos';
 
-    // Determine medium based on format and tier
-    if (format === 'in-article') {
-      utm_medium = 'inarticle_selfpromo';
-    } else if (format === 'banner') {
-      utm_medium = tier === 'HIGH' ? 'banner_selfpromo_high' : 'banner_selfpromo_low';
-    } else if (format === 'video') {
-      utm_medium = tier === 'HIGH' ? 'video_selfpromo_high' : 'video_selfpromo_low';
-    } else if (format === 'exclusive') {
-      utm_medium = 'exclusive_selfpromo';
-    } else if (format === 'audio') {
-      utm_medium = tier === 'HIGH' ? 'audio_selfpromo_high' : 'audio_selfpromo_low';
-    } else {
-      utm_medium = 'banner_selfpromo_high';
-    }
+    // ========== ZBOZI CAMPAIGN LOGIC ==========
+    if (isZbozi) {
+      const position = dimensionToPosition(dimensions);
 
-    // utm_content: campaign-content_format_service
-    if (format === 'in-article') {
-      utm_content = `${campaignName}-${contentName}_${format}_${service}`;
-      utm_term = `${format}_${service}`;
-    } else {
-      utm_content = `${campaignName}-${contentName}_${dimensions}`;
-      utm_term = format;
+      // utm_campaign: Different for LOW vs HIGH
+      if (tier === 'HIGH') {
+        const dateRange = formatDateRange(
+          document.getElementById('campaignStartDate')?.value,
+          document.getElementById('campaignEndDate')?.value
+        );
+        utm_campaign = `${normalizedCampaign}_${service}_${position}${dateRange ? '_' + dateRange : ''}`;
+      } else {
+        const year = extractYear(campaignName);
+        utm_campaign = `zbozi_low_${year}`;
+      }
+
+      // utm_content: ALL HYPHENS (not underscore before dimensions!)
+      utm_content = `${normalizedCampaign}-${normalizedContent}-${dimensions}`;
+
+      // utm_term: Position-based
+      utm_term = tier === 'HIGH' ? `${service}_${position}` : position;
+
+      // utm_medium: Keep SOS medium rules
+      if (format === 'kombi') {
+        utm_medium = 'kombi_selfpromo';
+      } else if (format === 'video') {
+        utm_medium = tier === 'HIGH' ? 'video_selfpromo_high' : 'video_selfpromo_low';
+      } else if (format === 'in-article') {
+        utm_medium = 'inarticle_selfpromo';
+      } else if (format === 'exclusive') {
+        utm_medium = 'exclusive_selfpromo';
+      } else if (format === 'audio') {
+        utm_medium = tier === 'HIGH' ? 'audio_selfpromo_high' : 'audio_selfpromo_low';
+      } else {
+        utm_medium = tier === 'HIGH' ? 'banner_selfpromo_high' : 'banner_selfpromo_low';
+      }
+    }
+    // ========== REGULAR SOS LOGIC ==========
+    else {
+      // Build utm_campaign with service prefix (or without if service already in campaign name)
+      utm_campaign = buildUTMCampaign(service, campaignName);
+
+      // Determine medium based on format and tier
+      if (format === 'in-article') {
+        utm_medium = 'inarticle_selfpromo';
+      } else if (format === 'banner') {
+        utm_medium = tier === 'HIGH' ? 'banner_selfpromo_high' : 'banner_selfpromo_low';
+      } else if (format === 'video') {
+        utm_medium = tier === 'HIGH' ? 'video_selfpromo_high' : 'video_selfpromo_low';
+      } else if (format === 'exclusive') {
+        utm_medium = 'exclusive_selfpromo';
+      } else if (format === 'audio') {
+        utm_medium = tier === 'HIGH' ? 'audio_selfpromo_high' : 'audio_selfpromo_low';
+      } else {
+        utm_medium = 'banner_selfpromo_high';
+      }
+
+      // utm_content: normalized campaign-content_format_service
+      if (format === 'in-article') {
+        utm_content = `${normalizedCampaign}-${normalizedContent}_${format}_${service}`;
+        utm_term = `${format}_${service}`;
+      } else {
+        utm_content = `${normalizedCampaign}-${normalizedContent}_${dimensions}`;
+        utm_term = normalizeUTMText(format);
+      }
     }
 
   } else if (network === 'ONEGAR') {
@@ -388,37 +649,142 @@ function generateBannerURL(params) {
     // Check if it's through ADFORM
     const isAdform = false; // Will be determined by user selection later
 
-    if (format === 'kombi') {
-      utm_medium = 'kombi_selfpromo';
-      utm_content = `${campaignName}-${contentName}_kombi`;
-      utm_term = 'kombi';
-    } else if (format === 'banner') {
+    // ========== ZBOZI CAMPAIGN LOGIC ==========
+    if (isZbozi) {
+      const position = dimensionToPosition(dimensions);
+
+      // utm_campaign: Different for LOW vs HIGH
       if (tier === 'HIGH') {
-        utm_medium = isAdform ? 'banner_selfpromo_high_adform' : 'banner_selfpromo_high';
+        const dateRange = formatDateRange(
+          document.getElementById('campaignStartDate')?.value,
+          document.getElementById('campaignEndDate')?.value
+        );
+        utm_campaign = `${normalizedCampaign}_${service}_${position}${dateRange ? '_' + dateRange : ''}`;
       } else {
-        utm_medium = isAdform ? 'banner_selfpromo_low_adform' : 'banner_selfpromo_low';
+        const year = extractYear(campaignName);
+        utm_campaign = `zbozi_low_${year}`;
       }
-      utm_content = `${campaignName}-${contentName}_${dimensions}`;
-      utm_term = 'banner';
-    } else if (format === 'video') {
-      utm_medium = tier === 'HIGH' ? 'video_selfpromo_high' : 'video_selfpromo_low';
-      utm_content = `${campaignName}-${contentName}_${dimensions}`;
-      utm_term = 'video';
+
+      // utm_content: ALL HYPHENS (not underscore before dimensions!)
+      utm_content = `${normalizedCampaign}-${normalizedContent}-${dimensions}`;
+
+      // utm_term: Position-based
+      utm_term = tier === 'HIGH' ? `${service}_${position}` : position;
+
+      // utm_medium: Keep ONEGAR medium rules
+      if (format === 'kombi') {
+        utm_medium = 'kombi_selfpromo';
+      } else if (format === 'video') {
+        utm_medium = tier === 'HIGH' ? 'video_selfpromo_high' : 'video_selfpromo_low';
+      } else {
+        utm_medium = tier === 'HIGH' ? 'banner_selfpromo_high' : 'banner_selfpromo_low';
+      }
+    }
+    // ========== REGULAR ONEGAR LOGIC ==========
+    else {
+      // Build utm_campaign with service prefix
+      utm_campaign = buildUTMCampaign(service, campaignName);
+
+      if (format === 'kombi') {
+        utm_medium = 'kombi_selfpromo';
+        utm_content = `${normalizedCampaign}-${normalizedContent}_kombi`;
+        utm_term = 'kombi';
+      } else if (format === 'banner') {
+        if (tier === 'HIGH') {
+          utm_medium = isAdform ? 'banner_selfpromo_high_adform' : 'banner_selfpromo_high';
+        } else {
+          utm_medium = isAdform ? 'banner_selfpromo_low_adform' : 'banner_selfpromo_low';
+        }
+        utm_content = `${normalizedCampaign}-${normalizedContent}_${dimensions}`;
+        utm_term = 'banner';
+      } else if (format === 'video') {
+        utm_medium = tier === 'HIGH' ? 'video_selfpromo_high' : 'video_selfpromo_low';
+        utm_content = `${normalizedCampaign}-${normalizedContent}_${dimensions}`;
+        utm_term = 'video';
+      }
     }
 
   } else if (network === 'SKLIK') {
-    utm_source = 'seznam_low';
-    utm_medium = 'cpc_low';
-    utm_campaign = '{campaign}';
-    utm_content = '{adgroup}_{adtitle}';
-    utm_term = '';
+    utm_source = 'seznam_sklik';
+
+    // ========== ZBOZI CAMPAIGN LOGIC ==========
+    if (isZbozi) {
+      const position = dimensionToPosition(dimensions);
+
+      // utm_campaign: Different for LOW vs HIGH
+      if (tier === 'HIGH') {
+        const dateRange = formatDateRange(
+          document.getElementById('campaignStartDate')?.value,
+          document.getElementById('campaignEndDate')?.value
+        );
+        utm_campaign = `${normalizedCampaign}_${service}_${position}${dateRange ? '_' + dateRange : ''}`;
+      } else {
+        const year = extractYear(campaignName);
+        utm_campaign = `zbozi_low_${year}`;
+      }
+
+      // utm_content: ALL HYPHENS (not underscore before dimensions!)
+      utm_content = `${normalizedCampaign}-${normalizedContent}-${dimensions}`;
+
+      // utm_term: Position-based
+      utm_term = tier === 'HIGH' ? `${service}_${position}` : position;
+
+      // utm_medium: SKLIK uses 'cpc'
+      utm_medium = 'cpc';
+    }
+    // ========== REGULAR SKLIK LOGIC ==========
+    else {
+      utm_medium = 'cpc_low';
+      // SKLIK uses autotagging - keep {campaign} and {adtitle} placeholders (Rule 5 exception)
+      utm_campaign = '{campaign}';
+      utm_content = '{adgroup}_{adtitle}';
+      utm_term = '';
+    }
 
   } else if (network === 'ADFORM' || network === 'HP_EXCLUSIVE') {
-    // ADFORM and HP_EXCLUSIVE typically go through Onegar
-    utm_source = 'seznam_onegar';
-    utm_medium = tier === 'HIGH' ? 'banner_selfpromo_high_adform' : 'banner_selfpromo_low_adform';
-    utm_content = `${campaignName}-${contentName}_${dimensions}`;
-    utm_term = 'banner';
+    // Set utm_source based on network
+    utm_source = network === 'HP_EXCLUSIVE' ? 'homepage_exclusive' : 'seznam_adform';
+
+    // ========== ZBOZI CAMPAIGN LOGIC ==========
+    if (isZbozi) {
+      const position = dimensionToPosition(dimensions);
+
+      // utm_campaign: Different for LOW vs HIGH
+      if (tier === 'HIGH') {
+        const dateRange = formatDateRange(
+          document.getElementById('campaignStartDate')?.value,
+          document.getElementById('campaignEndDate')?.value
+        );
+        utm_campaign = `${normalizedCampaign}_${service}_${position}${dateRange ? '_' + dateRange : ''}`;
+      } else {
+        const year = extractYear(campaignName);
+        utm_campaign = `zbozi_low_${year}`;
+      }
+
+      // utm_content: ALL HYPHENS (not underscore before dimensions!)
+      utm_content = `${normalizedCampaign}-${normalizedContent}-${dimensions}`;
+
+      // utm_term: Position-based
+      utm_term = tier === 'HIGH' ? `${service}_${position}` : position;
+
+      // utm_medium
+      if (format === 'kombi') {
+        utm_medium = 'kombi_selfpromo';
+      } else if (format === 'video') {
+        utm_medium = tier === 'HIGH' ? 'video_selfpromo_high' : 'video_selfpromo_low';
+      } else {
+        utm_medium = tier === 'HIGH' ? 'banner_selfpromo_high' : 'banner_selfpromo_low';
+      }
+    }
+    // ========== REGULAR ADFORM/HP LOGIC ==========
+    else {
+      // Build utm_campaign with service prefix
+      utm_campaign = buildUTMCampaign(service, campaignName);
+
+      utm_medium = tier === 'HIGH' ? 'banner_selfpromo_high_adform' : 'banner_selfpromo_low_adform';
+      utm_content = `${normalizedCampaign}-${normalizedContent}_${dimensions}`;
+      utm_term = 'banner';
+    }
   }
 
   // Build URL
@@ -435,8 +801,10 @@ function generateBannerURL(params) {
     url += '?' + params_array.join('&');
   }
 
+  // Add anchor (also normalized according to rules)
   if (anchor) {
-    url += '#' + anchor;
+    const normalizedAnchor = normalizeUTMText(anchor);
+    url += '#' + normalizedAnchor;
   }
 
   return url;
@@ -617,20 +985,33 @@ function displayUploadedFiles() {
   }
 
   const html = `
-    <div style="margin-top: 20px;">
+    <div class="uploaded-files-container" style="margin-top: 20px;">
       <h3>Uploaded Files (${appState.uploadedFiles.length})</h3>
-      <ul style="list-style: none; padding: 0;">
-        ${appState.uploadedFiles.map((file, index) => `
-          <li style="padding: 10px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <strong>${file.name}</strong>
-              ${file.dimensions ? `<span style="color: #6b7280; margin-left: 10px;">${file.dimensions}</span>` : ''}
-              <span style="color: #6b7280; margin-left: 10px;">${file.sizeKB} KB</span>
-              ${!file.colorSpaceValid ? '<span style="color: #ef4444; margin-left: 10px;">⚠️ CMYK</span>' : ''}
+      <ul class="uploaded-files-list" style="list-style: none; padding: 0;">
+        ${appState.uploadedFiles.map((file, index) => {
+          // Generate thumbnail URL if file has preview (images only)
+          const thumbnailURL = file.preview || (file.file ? createThumbnailURL(file.file) : '');
+
+          return `
+          <li class="uploaded-file-item" style="padding: 10px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
+              ${thumbnailURL ? `
+                <img class="file-thumbnail" src="${thumbnailURL}" alt="${file.name}"
+                  style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid #e5e7eb; flex-shrink: 0;">
+              ` : `
+                <div class="file-thumbnail-placeholder" style="width: 40px; height: 40px; background: #f3f4f6; border-radius: 4px; border: 1px solid #e5e7eb; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 18px;">📄</div>
+              `}
+              <div class="file-info">
+                <strong class="file-name">${file.name}</strong>
+                ${file.dimensions ? `<span class="file-dimensions" style="color: #6b7280; margin-left: 10px;">${file.dimensions}</span>` : ''}
+                <span class="file-size" style="color: #6b7280; margin-left: 10px;">${file.sizeKB} KB</span>
+                ${!file.colorSpaceValid ? '<span class="file-warning" style="color: #ef4444; margin-left: 10px;">⚠️ CMYK</span>' : ''}
+              </div>
             </div>
-            <button onclick="removeFile(${index})" style="background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">✕</button>
+            <button class="remove-file-btn" onclick="removeFile(${index})" style="background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; flex-shrink: 0;">✕</button>
           </li>
-        `).join('')}
+        `;
+        }).join('')}
       </ul>
     </div>
   `;
@@ -884,20 +1265,20 @@ function displayNetworkToggles() {
         <div style="display: flex; align-items: flex-start; gap: 15px;">
           <div style="flex: 1;">
             <div style="font-weight: 700; font-size: 20px; color: #1f2937; margin-bottom: 12px;">
-              ${stats.network.replace('_', ' ')}
+              <span style="cursor: help; border-bottom: 1px dotted #6b7280;" title="${getNetworkTooltip(stats.network)}">${stats.network.replace('_', ' ')}</span>
             </div>
 
-            <div style="font-size: 18px; color: #1f2937; margin-bottom: 12px;">
-              <span style="display: inline-flex; align-items: center; gap: 5px;">
-                <span style="font-size: 20px;">✓</span>
-                <span style="font-weight: 700; color: #10b981;">${stats.eligibleAssets} validních</span>
+            <div class="network-stats-summary" style="font-size: 18px; color: #1f2937; margin-bottom: 12px;">
+              <span class="valid-assets-count" style="display: inline-flex; align-items: center; gap: 5px;">
+                <span class="valid-icon" style="font-size: 20px;">✓</span>
+                <span class="valid-count" style="font-weight: 700; color: #10b981;">${stats.eligibleAssets} validních assetů</span>
               </span>
-              <span style="color: #6b7280;"> (${stats.totalPlacements} umístění)</span>
+              <span class="placements-count" style="color: #6b7280;"> (${stats.totalPlacements} umístění)</span>
               ${hasErrors ? `
-                <span style="margin-left: 15px; display: inline-flex; align-items: center; gap: 5px;">
-                  <span style="font-size: 20px;">⚠</span>
-                  <span style="font-weight: 700; color: #ef4444;">${stats.errors}</span>
-                  <span style="color: #6b7280;"> chyb</span>
+                <span class="error-assets-count" style="margin-left: 15px; display: inline-flex; align-items: center; gap: 5px;">
+                  <span class="error-icon" style="font-size: 20px;">⚠</span>
+                  <span class="error-count" style="font-weight: 700; color: #ef4444;">${stats.errors}</span>
+                  <span class="error-label" style="color: #6b7280;"> chyb</span>
                 </span>
               ` : ''}
             </div>
@@ -944,12 +1325,12 @@ function displayNetworkToggles() {
   togglesSection.innerHTML = html;
 }
 
-// Display network selection with checkboxes (Step 3)
+// Display network selection with checkboxes (Step 4)
 function displayNetworkSelection() {
   const selectionSection = document.getElementById('networkSelection');
   if (!selectionSection) return;
 
-  let html = '<div style="display: grid; gap: 15px; margin-bottom: 20px;">';
+  let html = '<div id="network-selection-container" style="display: grid; gap: 15px; margin-bottom: 20px;">';
 
   // Aggregate stats per network (combining HIGH and LOW tiers)
   const networkAggregates = [];
@@ -972,33 +1353,35 @@ function displayNetworkSelection() {
   networkAggregates.sort((a, b) => b.eligibleAssets - a.eligibleAssets);
 
   for (const stats of networkAggregates) {
+    const hasHPExclusive = stats.network === 'HP_EXCLUSIVE';
+
     html += `
-      <div class="network-toggle-card" style="border: 2px solid #10b981; border-radius: 12px; padding: 20px; background: #f0fdf4; transition: all 0.2s;">
-        <label style="display: flex; align-items: center; gap: 15px; cursor: pointer;">
-          <input type="checkbox" id="select_${stats.network}"
+      <div class="network-selection-card" id="network-card-${stats.network}" style="border: 2px solid #10b981; border-radius: 12px; padding: 20px; background: #f0fdf4; transition: all 0.2s;">
+        <label class="network-checkbox-label" style="display: flex; align-items: center; gap: 15px; cursor: pointer;">
+          <input class="network-checkbox" type="checkbox" id="select_${stats.network}"
             checked
             onchange="toggleNetworkSelection('${stats.network}')"
             style="width: 24px; height: 24px; cursor: pointer; accent-color: #10b981;">
-          <div style="flex: 1;">
-            <div style="font-weight: 700; font-size: 20px; color: #1f2937;">
-              ${stats.network.replace('_', ' ')}
+          <div class="network-info" style="flex: 1;">
+            <div class="network-name" style="font-weight: 700; font-size: 20px; color: #1f2937;">
+              <span class="network-name-tooltip" style="cursor: help; border-bottom: 1px dotted #6b7280;" title="${getNetworkTooltip(stats.network)}">${stats.network.replace('_', ' ')}</span>
             </div>
-            <div style="font-size: 16px; color: #1f2937; margin-top: 8px;">
-              <span style="font-weight: 700; color: #10b981;">${stats.eligibleAssets} validních bannerů</span>
+            <div class="network-banner-count" style="font-size: 16px; color: #1f2937; margin-top: 8px;">
+              <span class="banner-count-value" style="font-weight: 700; color: #10b981;">${stats.eligibleAssets} validních bannerů</span>
             </div>
           </div>
         </label>
-        <div style="margin-top: 12px;">
-          <button onclick="toggleExportPreview('${stats.network}')"
+
+        <div class="network-actions" style="margin-top: 12px;">
+          <button class="toggle-banner-selection-btn" onclick="toggleExportPreview('${stats.network}')"
             id="previewBtn_${stats.network}"
             style="background: #ffffff; border: 1px solid #10b981; color: #10b981; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
-            <span id="previewIcon_${stats.network}">▶</span>
-            <span id="previewText_${stats.network}">Zobrazit bannery k exportu</span>
+            <span class="toggle-icon" id="previewIcon_${stats.network}">▶</span>
+            <span id="previewText_${stats.network}">Vybrat bannery k exportu</span>
           </button>
         </div>
-        <div id="previewDetails_${stats.network}" style="display: none; margin-top: 12px; padding: 12px; background: #ffffff; border: 1px solid #bbf7d0; border-radius: 6px; font-size: 13px;">
-          <div style="font-weight: 600; color: #166534; margin-bottom: 8px;">Bannery k exportu:</div>
-          ${buildExportPreview(stats.network)}
+        <div id="previewDetails_${stats.network}" class="banner-selection-panel" style="display: none; margin-top: 12px; padding: 12px; background: #ffffff; border: 1px solid #bbf7d0; border-radius: 6px; font-size: 13px;">
+          ${buildExportPreviewWithCheckboxes(stats.network)}
         </div>
       </div>
     `;
@@ -1013,6 +1396,92 @@ function displayNetworkSelection() {
 
 function toggleNetworkSelection(network) {
   updateSelectedNetworks();
+}
+
+/**
+ * Create a thumbnail URL from a File object
+ * @param {File} file - The file to create a thumbnail for
+ * @returns {string} Object URL for the thumbnail
+ */
+function createThumbnailURL(file) {
+  return URL.createObjectURL(file);
+}
+
+function buildExportPreviewWithCheckboxes(network) {
+  // Get all valid files for this network (across all tiers)
+  const assignedFiles = [];
+  const otherValidFiles = [];
+
+  for (const [fileName, validation] of Object.entries(appState.validationResults)) {
+    const matches = validation.compatible.filter(c => c.network === network);
+    if (matches.length > 0) {
+      const fileInfo = {
+        fileName,
+        file: validation.file
+      };
+
+      // Check if file is assigned to this network based on folder name
+      if (validation.file.assignedSystem === network) {
+        assignedFiles.push(fileInfo);
+      } else {
+        otherValidFiles.push(fileInfo);
+      }
+    }
+  }
+
+  if (assignedFiles.length === 0 && otherValidFiles.length === 0) {
+    return '<p style="color: #6b7280;">Žádné bannery k exportu</p>';
+  }
+
+  let html = '';
+
+  // Show assigned banners first
+  if (assignedFiles.length > 0) {
+    html += '<div class="banner-list-section" style="margin-bottom: 12px;">';
+    html += '<div style="font-weight: 600; color: #059669; margin-bottom: 8px; font-size: 13px;">📂 Přiřazené bannery:</div>';
+    html += '<ul style="margin: 0; padding-left: 0; list-style: none; color: #166534;">';
+    for (const fileData of assignedFiles) {
+      const checkboxId = `banner_${network}_${fileData.fileName.replace(/[^a-zA-Z0-9]/g, '_')}`;
+      const thumbnailURL = createThumbnailURL(fileData.file.file);
+      html += `
+        <li style="margin-bottom: 8px; display: flex; align-items: center; gap: 10px;">
+          <input type="checkbox" id="${checkboxId}" checked onchange="updateBannerSelection('${network}', '${fileData.fileName}')" style="width: 18px; height: 18px; cursor: pointer; accent-color: #10b981; flex-shrink: 0;">
+          <img src="${thumbnailURL}" alt="${fileData.fileName}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid #e5e7eb; flex-shrink: 0;">
+          <label for="${checkboxId}" style="cursor: pointer; flex: 1;">
+            <strong>${fileData.fileName}</strong> <span style="color: #6b7280; font-size: 12px;">(${fileData.file.dimensions})</span>
+          </label>
+        </li>`;
+    }
+    html += '</ul>';
+    html += '</div>';
+  }
+
+  // Show other compatible banners
+  if (otherValidFiles.length > 0) {
+    html += '<div class="banner-list-section" style="margin-bottom: 12px;">';
+    // If there are no assigned files, just show "Bannery k exportu" instead of "Další kompatibilní bannery"
+    const headline = assignedFiles.length === 0
+      ? 'Bannery k exportu:'
+      : '✓ Další kompatibilní bannery:';
+    html += `<div style="font-weight: 600; color: #059669; margin-bottom: 8px; font-size: 13px;">${headline}</div>`;
+    html += '<ul style="margin: 0; padding-left: 0; list-style: none; color: #166534;">';
+    for (const fileData of otherValidFiles) {
+      const checkboxId = `banner_${network}_${fileData.fileName.replace(/[^a-zA-Z0-9]/g, '_')}`;
+      const thumbnailURL = createThumbnailURL(fileData.file.file);
+      html += `
+        <li style="margin-bottom: 8px; display: flex; align-items: center; gap: 10px;">
+          <input type="checkbox" id="${checkboxId}" checked onchange="updateBannerSelection('${network}', '${fileData.fileName}')" style="width: 18px; height: 18px; cursor: pointer; accent-color: #10b981; flex-shrink: 0;">
+          <img src="${thumbnailURL}" alt="${fileData.fileName}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid #e5e7eb; flex-shrink: 0;">
+          <label for="${checkboxId}" style="cursor: pointer; flex: 1;">
+            <strong>${fileData.fileName}</strong> <span style="color: #6b7280; font-size: 12px;">(${fileData.file.dimensions})</span>
+          </label>
+        </li>`;
+    }
+    html += '</ul>';
+    html += '</div>';
+  }
+
+  return html;
 }
 
 function buildExportPreview(network) {
@@ -1058,7 +1527,11 @@ function buildExportPreview(network) {
   // Show other compatible banners
   if (otherValidFiles.length > 0) {
     html += '<div style="margin-bottom: 12px;">';
-    html += '<div style="font-weight: 600; color: #059669; margin-bottom: 8px; font-size: 13px;">✓ Další kompatibilní bannery:</div>';
+    // If there are no assigned files, just show "Bannery k exportu" instead of "Další kompatibilní bannery"
+    const headline = assignedFiles.length === 0
+      ? 'Bannery k exportu:'
+      : '✓ Další kompatibilní bannery:';
+    html += `<div style="font-weight: 600; color: #059669; margin-bottom: 8px; font-size: 13px;">${headline}</div>`;
     html += '<ul style="margin: 0; padding-left: 20px; color: #166534;">';
     for (const fileData of otherValidFiles) {
       html += `<li style="margin-bottom: 4px;"><strong>${fileData.fileName}</strong> <span style="color: #6b7280; font-size: 12px;">(${fileData.file.dimensions})</span></li>`;
@@ -1214,11 +1687,31 @@ function updateSelectedNetworks() {
   for (const network in appState.networkStats) {
     const checkbox = document.getElementById(`select_${network}`);
     if (checkbox && checkbox.checked) {
+      // Get selected banners for this network
+      const selectedBanners = [];
+      for (const [fileName, validation] of Object.entries(appState.validationResults)) {
+        const matches = validation.compatible.filter(c => c.network === network);
+        if (matches.length > 0) {
+          const checkboxId = `banner_${network}_${fileName.replace(/[^a-zA-Z0-9]/g, '_')}`;
+          const bannerCheckbox = document.getElementById(checkboxId);
+          if (bannerCheckbox && bannerCheckbox.checked) {
+            selectedBanners.push(fileName);
+          }
+        }
+      }
+
+      // Store without tier - tier is determined in step 5
       appState.selectedNetworks.push({
-        network: network
+        network: network,
+        selectedBanners: selectedBanners
       });
     }
   }
+}
+
+function updateBannerSelection(network, fileName) {
+  // Just update the state - the checkbox state is already updated by the browser
+  updateSelectedNetworks();
 }
 
 function toggleNetworkErrors(key) {
@@ -1283,6 +1776,191 @@ function updateCampaignTier(tier) {
   displayExportSettings();
 }
 
+/**
+ * Build HTML for a single network tier section
+ * @param {string} network - Network name (e.g., 'ADFORM', 'SOS')
+ * @param {string} tier - Tier level ('LOW' or 'HIGH')
+ * @param {Object} selection - Selection object with network and selectedBanners
+ * @param {string} campaignName - Campaign name
+ * @param {string} contentName - Content name
+ * @param {string} landingURL - Landing page URL
+ * @returns {string} HTML for the tier section
+ */
+function buildNetworkTierSection(network, tier, selection, campaignName, contentName, landingURL) {
+  const tierKey = network === 'HP_EXCLUSIVE' ? 'NONE' : tier;
+  const stats = appState.networkStats[network][tierKey];
+
+  if (!stats) return '';
+
+  // Get eligible files for this network and tier, filtered by selected banners
+  const eligibleFiles = [];
+  for (const [fileName, validation] of Object.entries(appState.validationResults)) {
+    // Only include files that were selected in step 4
+    if (!selection.selectedBanners || !selection.selectedBanners.includes(fileName)) {
+      continue;
+    }
+
+    const matches = validation.compatible.filter(c =>
+      c.network === network && (c.tier === tier || (network === 'HP_EXCLUSIVE' && !c.tier))
+    );
+
+    if (matches.length > 0) {
+      eligibleFiles.push({
+        fileName,
+        file: validation.file,
+        placements: matches
+      });
+    }
+  }
+
+  // Build and return the HTML for this tier section
+  return `
+    <div class="network-card" style="border: 2px solid #10b981; border-radius: 12px; padding: 20px; margin: 20px 0; background: #f0fdf4;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <div>
+          <h3 style="margin: 0; font-size: 22px; color: #1f2937;">
+            <span style="cursor: help; border-bottom: 1px dotted #6b7280;" title="${getNetworkTooltip(network)}">${network.replace('_', ' ')}</span> - ${tier} Tier
+          </h3>
+          <div style="font-size: 14px; color: #6b7280; margin-top: 5px;">
+            Tier kampaně: <strong>${network === 'HP_EXCLUSIVE' ? 'N/A' : tier}</strong>
+          </div>
+        </div>
+        <div style="text-align: right;">
+          <div style="font-size: 28px; font-weight: 700; color: #10b981;">${eligibleFiles.length}</div>
+          <div style="font-size: 12px; color: #6b7280;">Validních bannerů</div>
+        </div>
+      </div>
+
+      <div style="padding: 12px; background: white; border-radius: 8px; margin-bottom: 15px;">
+        <div style="font-size: 12px; color: #6b7280;">Počet kampaňových assetů</div>
+        <div style="font-size: 20px; font-weight: 700; color: #3b82f6;">${stats.eligiblePlacements}</div>
+      </div>
+
+      ${eligibleFiles.length > 0 ? `
+        <div style="margin-bottom: 15px;">
+          <strong style="display: block; margin-bottom: 8px; color: #1f2937;">Bannery k exportu:</strong>
+          <div style="overflow-x: auto; background: white; border-radius: 6px;">
+            <table class="results-table" style="width: 100%; min-width: 1000px;">
+              <thead>
+                <tr>
+                  <th style="width: 180px;">Název banneru</th>
+                  <th style="width: 100px;">Rozměr</th>
+                  <th style="width: 120px;">Formát</th>
+                  <th style="width: 120px;">Služba</th>
+                  <th style="width: 120px;">Ukotvení</th>
+                  <th>Finální URL</th>
+                  <th style="width: 80px;">Akce</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${eligibleFiles.map((f, idx) => {
+                  const fileId = `${network}_${tier}_${idx}`;
+                  const defaultFormat = 'banner';
+                  const defaultService = 'hp';
+
+                  // Generate URL with current values
+                  const generatedURL = generateBannerURL({
+                    network: network,
+                    tier: tier,
+                    campaignName: campaignName,
+                    contentName: contentName,
+                    landingURL: landingURL,
+                    dimensions: f.file.dimensions,
+                    format: defaultFormat,
+                    service: defaultService,
+                    anchor: '',
+                    isZbozi: appState.isZboziCampaign
+                  });
+
+                  const finalName = generateFinalFilename(f.fileName, f.file.dimensions, campaignName, network);
+
+                  return `
+                    <tr>
+                      <td>
+                        <div style="font-weight: 600;">${f.fileName}</div>
+                        <div style="font-size: 11px; color: #10b981; margin-top: 2px;">→ ${finalName}</div>
+                      </td>
+                      <td>${f.file.dimensions}</td>
+                      <td>
+                        <select id="format_${fileId}" onchange="updateBannerURL('${fileId}', '${network}', '${tier}', ${idx})" style="width: 100%; padding: 4px; font-size: 12px;">
+                          <option value="banner" selected>Banner</option>
+                          <option value="kombi">Kombi</option>
+                        </select>
+                      </td>
+                      <td>
+                        <select id="service_${fileId}" onchange="updateBannerURL('${fileId}', '${network}', '${tier}', ${idx})" style="width: 100%; padding: 4px; font-size: 12px;">
+                          <option value="hp" selected>HP</option>
+                          <option value="vyhledavani">Vyhledávání</option>
+                          <option value="email">Email</option>
+                          <option value="mapy">Mapy</option>
+                          <option value="zbozi">Zboží</option>
+                          <option value="sreality">SReality</option>
+                          <option value="sauto">SAutoSalon</option>
+                          <option value="firmy">Firmy</option>
+                          <option value="televizeseznam">Televize Seznam</option>
+                          <option value="stream">Stream</option>
+                          <option value="seznamzpravy">Seznam Zprávy</option>
+                          <option value="novinky">Novinky</option>
+                          <option value="sport">Sport</option>
+                          <option value="super">Super</option>
+                          <option value="seznamnative">Seznam Native</option>
+                          <option value="obsah">Obsah</option>
+                          <option value="zpravy">Zprávy</option>
+                          <option value="prozeny">Pro ženy</option>
+                          <option value="garaz">Garáž</option>
+                          <option value="prohlizec">Prohlížeč</option>
+                          <option value="expresfm">Expres FM</option>
+                          <option value="classicpraha">Classic Praha</option>
+                          <option value="seznammenu">Seznam Menu</option>
+                          <option value="seznamaudio">Seznam Audio</option>
+                          <option value="iptv">IPTV</option>
+                          <option value="seznammedium">Seznam Medium</option>
+                          <option value="blog">Blog</option>
+                          <option value="seznammarketplace">Seznam Marketplace</option>
+                          <option value="horoskopy">Horoskopy</option>
+                          <option value="csr">CSR</option>
+                          <option value="hrm">HRM</option>
+                          <option value="seznampartner">Seznam Partner</option>
+                          <option value="sklik">Sklik</option>
+                          <option value="obchod">Obchod</option>
+                          <option value="rtb">RTB</option>
+                          <option value="pravo">Právo</option>
+                          <option value="seznamidentita">Seznam Identita</option>
+                          <option value="seznambezreklam">Seznam bez reklam</option>
+                          <option value="seznaminternational">Seznam International</option>
+                        </select>
+                      </td>
+                      <td>
+                        <input type="text" id="anchor_${fileId}" onchange="updateBannerURL('${fileId}', '${network}', '${tier}', ${idx})" placeholder="např. at-ziji-duchove" style="width: 100%; padding: 4px; font-size: 12px;">
+                      </td>
+                      <td>
+                        <div id="url_${fileId}" style="font-size: 11px; color: #3b82f6; word-break: break-all; font-family: monospace;">${generatedURL}</div>
+                      </td>
+                      <td style="text-align: center;">
+                        <button onclick="copyURL('${fileId}')" style="padding: 4px 8px; font-size: 11px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                          📋 Kopírovat
+                        </button>
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <button class="btn-primary" onclick="exportNetworkZIP('${network}', '${tier}')" style="width: 100%; padding: 12px; font-size: 16px;">
+          📦 Stáhnout balíček ${network} ${tier}
+        </button>
+      ` : `
+        <div style="padding: 15px; background: #fef2f2; border-radius: 6px; color: #991b1b; text-align: center;">
+          Žádné validní bannery pro tento systém a tier
+        </div>
+      `}
+    </div>
+  `;
+}
+
 function displayExportSettings() {
   const exportNetworksSection = document.getElementById('exportNetworks');
   if (!exportNetworksSection) return;
@@ -1294,139 +1972,39 @@ function displayExportSettings() {
 
   let html = '';
 
-  // Display each selected network with tier-specific stats
+  // Display each selected network with tier toggle and sections
   for (const selection of appState.selectedNetworks) {
     const network = selection.network;
-    const tier = appState.selectedCampaignTier;
-    const tierKey = network === 'HP_EXCLUSIVE' ? 'NONE' : tier;
-    const stats = appState.networkStats[network][tierKey];
+    const hasHPExclusive = network === 'HP_EXCLUSIVE';
 
-    if (!stats) continue;
+    html += `<div class="network-tier-container" style="margin-bottom: 30px;">`;
 
-    // Get eligible files for this network and tier
-    const eligibleFiles = [];
-    for (const [fileName, validation] of Object.entries(appState.validationResults)) {
-      const matches = validation.compatible.filter(c =>
-        c.network === network && (c.tier === tier || (network === 'HP_EXCLUSIVE' && !c.tier))
-      );
-
-      if (matches.length > 0) {
-        eligibleFiles.push({
-          fileName,
-          file: validation.file,
-          placements: matches
-        });
-      }
+    // Tier toggle (only for non-HP_EXCLUSIVE networks)
+    if (!hasHPExclusive) {
+      html += `
+        <div class="tier-toggle-section" style="margin-bottom: 20px; padding: 15px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
+          <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+            <input type="checkbox" id="tierToggle_${network}" onchange="toggleHighTierSection('${network}')" style="width: 20px; height: 20px; cursor: pointer; accent-color: #10b981;">
+            <span style="font-weight: 600; font-size: 16px;">Zobrazit a zkopírovat nastavení High tier</span>
+          </label>
+          <div class="helper-text" style="margin-left: 30px; margin-top: 5px; font-size: 13px; color: #6b7280;">Zkopíruje nastavení z LOW tier a zobrazí sekci HIGH tier</div>
+        </div>
+      `;
     }
 
-    html += `
-      <div style="border: 2px solid #10b981; border-radius: 12px; padding: 20px; margin: 20px 0; background: #f0fdf4;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-          <div>
-            <h3 style="margin: 0; font-size: 22px; color: #1f2937;">${network.replace('_', ' ')}</h3>
-            <div style="font-size: 14px; color: #6b7280; margin-top: 5px;">
-              Tier kampaně: <strong>${network === 'HP_EXCLUSIVE' ? 'N/A' : tier}</strong>
-            </div>
-          </div>
-          <div style="text-align: right;">
-            <div style="font-size: 28px; font-weight: 700; color: #10b981;">${eligibleFiles.length}</div>
-            <div style="font-size: 12px; color: #6b7280;">Validních bannerů</div>
-          </div>
-        </div>
+    // LOW tier section (always visible)
+    html += `<div id="tierSection_${network}_LOW">`;
+    html += buildNetworkTierSection(network, 'LOW', selection, campaignName, contentName, landingURL);
+    html += `</div>`;
 
-        <div style="padding: 12px; background: white; border-radius: 8px; margin-bottom: 15px;">
-          <div style="font-size: 12px; color: #6b7280;">Počet kampaňových assetů</div>
-          <div style="font-size: 20px; font-weight: 700; color: #3b82f6;">${stats.eligiblePlacements}</div>
-        </div>
+    // HIGH tier section (hidden by default)
+    if (!hasHPExclusive) {
+      html += `<div id="tierSection_${network}_HIGH" style="display: none; margin-top: 20px;">`;
+      html += buildNetworkTierSection(network, 'HIGH', selection, campaignName, contentName, landingURL);
+      html += `</div>`;
+    }
 
-        ${eligibleFiles.length > 0 ? `
-          <div style="margin-bottom: 15px;">
-            <strong style="display: block; margin-bottom: 8px; color: #1f2937;">Bannery k exportu:</strong>
-            <div style="overflow-x: auto; background: white; border-radius: 6px;">
-              <table class="results-table" style="width: 100%; min-width: 1000px;">
-                <thead>
-                  <tr>
-                    <th style="width: 180px;">Název banneru</th>
-                    <th style="width: 100px;">Rozměr</th>
-                    <th style="width: 120px;">Formát</th>
-                    <th style="width: 120px;">Služba</th>
-                    <th style="width: 120px;">Ukotvení</th>
-                    <th>Finální URL</th>
-                    <th style="width: 80px;">Akce</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${eligibleFiles.map((f, idx) => {
-                    const fileId = `${network}_${tier}_${idx}`;
-                    const defaultFormat = 'banner';
-                    const defaultService = 'hp';
-
-                    // Generate URL with current values
-                    const generatedURL = generateBannerURL({
-                      network: network,
-                      tier: tier,
-                      campaignName: campaignName,
-                      contentName: contentName,
-                      landingURL: landingURL,
-                      dimensions: f.file.dimensions,
-                      format: defaultFormat,
-                      service: defaultService,
-                      anchor: '',
-                      isZbozi: appState.isZboziCampaign
-                    });
-
-                    const finalName = generateFinalFilename(f.fileName, f.file.dimensions, campaignName, network);
-
-                    return `
-                      <tr>
-                        <td>
-                          <div style="font-weight: 600;">${f.fileName}</div>
-                          <div style="font-size: 11px; color: #10b981; margin-top: 2px;">→ ${finalName}</div>
-                        </td>
-                        <td>${f.file.dimensions}</td>
-                        <td>
-                          <select id="format_${fileId}" onchange="updateBannerURL('${fileId}', '${network}', '${tier}', ${idx})" style="width: 100%; padding: 4px; font-size: 12px;">
-                            <option value="banner" selected>Banner</option>
-                            <option value="kombi">Kombi</option>
-                          </select>
-                        </td>
-                        <td>
-                          <select id="service_${fileId}" onchange="updateBannerURL('${fileId}', '${network}', '${tier}', ${idx})" style="width: 100%; padding: 4px; font-size: 12px;">
-                            <option value="hp" selected>HP</option>
-                            <option value="obsah">Obsah</option>
-                            <option value="sport">Sport</option>
-                            <option value="zpravy">Zprávy</option>
-                          </select>
-                        </td>
-                        <td>
-                          <input type="text" id="anchor_${fileId}" onchange="updateBannerURL('${fileId}', '${network}', '${tier}', ${idx})" placeholder="např. at-ziji-duchove" style="width: 100%; padding: 4px; font-size: 12px;">
-                        </td>
-                        <td>
-                          <div id="url_${fileId}" style="font-size: 11px; color: #3b82f6; word-break: break-all; font-family: monospace;">${generatedURL}</div>
-                        </td>
-                        <td style="text-align: center;">
-                          <button onclick="copyURL('${fileId}')" style="padding: 4px 8px; font-size: 11px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                            📋 Kopírovat
-                          </button>
-                        </td>
-                      </tr>
-                    `;
-                  }).join('')}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <button class="btn-primary" onclick="exportNetworkZIP('${network}', '${tier}')" style="width: 100%; padding: 12px; font-size: 16px;">
-            📦 Stáhnout balíček ${network} (ZIP + instrukce)
-          </button>
-        ` : `
-          <div style="padding: 15px; background: #fef2f2; border-radius: 6px; color: #991b1b; text-align: center;">
-            Žádné validní bannery pro tento systém a tier
-          </div>
-        `}
-      </div>
-    `;
+    html += `</div>`; // Close network-tier-container
   }
 
   if (html === '') {
@@ -1434,6 +2012,82 @@ function displayExportSettings() {
   }
 
   exportNetworksSection.innerHTML = html;
+}
+
+/**
+ * Toggle HIGH tier section visibility and copy LOW tier settings
+ * @param {string} network - Network name
+ */
+function toggleHighTierSection(network) {
+  const toggle = document.getElementById(`tierToggle_${network}`);
+  const highSection = document.getElementById(`tierSection_${network}_HIGH`);
+
+  if (!toggle || !highSection) return;
+
+  if (toggle.checked) {
+    // Copy LOW tier settings to HIGH tier
+    copyLowToHighTierSettings(network);
+
+    // Show HIGH tier section
+    highSection.style.display = 'block';
+  } else {
+    // Hide HIGH tier section
+    highSection.style.display = 'none';
+  }
+}
+
+/**
+ * Copy LOW tier settings to HIGH tier for a network
+ * @param {string} network - Network name
+ */
+function copyLowToHighTierSettings(network) {
+  // Find the selection for this network
+  const selection = appState.selectedNetworks.find(s => s.network === network);
+  if (!selection) return;
+
+  // Get eligible files for this network (both LOW and HIGH will have same files)
+  const eligibleFiles = [];
+  for (const [fileName, validation] of Object.entries(appState.validationResults)) {
+    if (!selection.selectedBanners || !selection.selectedBanners.includes(fileName)) {
+      continue;
+    }
+    const matches = validation.compatible.filter(c => c.network === network);
+    if (matches.length > 0) {
+      eligibleFiles.push({ fileName, file: validation.file });
+    }
+  }
+
+  // Copy settings for each file
+  for (let idx = 0; idx < eligibleFiles.length; idx++) {
+    const lowFileId = `${network}_LOW_${idx}`;
+    const highFileId = `${network}_HIGH_${idx}`;
+
+    // Get LOW tier elements
+    const lowFormat = document.getElementById(`format_${lowFileId}`);
+    const lowService = document.getElementById(`service_${lowFileId}`);
+    const lowAnchor = document.getElementById(`anchor_${lowFileId}`);
+
+    // Get HIGH tier elements
+    const highFormat = document.getElementById(`format_${highFileId}`);
+    const highService = document.getElementById(`service_${highFileId}`);
+    const highAnchor = document.getElementById(`anchor_${highFileId}`);
+
+    // Copy values
+    if (lowFormat && highFormat) {
+      highFormat.value = lowFormat.value;
+    }
+    if (lowService && highService) {
+      highService.value = lowService.value;
+    }
+    if (lowAnchor && highAnchor) {
+      highAnchor.value = lowAnchor.value;
+    }
+
+    // Update HIGH tier URL with copied values
+    if (highFormat && highService && highAnchor) {
+      updateBannerURL(highFileId, network, 'HIGH', idx);
+    }
+  }
 }
 
 /**
@@ -1512,9 +2166,21 @@ function generateFinalFilename(originalName, dimensions, campaignName, network) 
 
 async function exportNetworkZIP(network, tier) {
   try {
-    // Get eligible files for this network and tier
+    // Find the selection for this network (tier is no longer in selection)
+    const selection = appState.selectedNetworks.find(s => s.network === network);
+    if (!selection) {
+      alert('Systém nebyl nalezen ve výběru.');
+      return;
+    }
+
+    // Get eligible files for this network and tier, filtered by selected banners
     const eligibleFiles = [];
     for (const [fileName, validation] of Object.entries(appState.validationResults)) {
+      // Only include files that were selected in step 4
+      if (!selection.selectedBanners || !selection.selectedBanners.includes(fileName)) {
+        continue;
+      }
+
       const matches = validation.compatible.filter(c =>
         c.network === network && (c.tier === tier || (network === 'HP_EXCLUSIVE' && !c.tier))
       );
@@ -1533,55 +2199,271 @@ async function exportNetworkZIP(network, tier) {
       return;
     }
 
+    const campaignName = appState.campaignName || '';
+    const contentName = appState.contentName || '';
+    const landingURL = appState.landingURL || '';
+
     // Create ZIP file
     const zip = new JSZip();
 
-    // Add all eligible banner files
+    // Add all eligible banner files with renamed filenames
     for (const fileData of eligibleFiles) {
-      zip.file(fileData.fileName, fileData.file.file);
+      const finalName = generateFinalFilename(fileData.fileName, fileData.file.dimensions, campaignName, network);
+      zip.file(finalName, fileData.file.file);
     }
 
-    // Generate URLs list
-    let urlsList = `${network} - ${network === 'HP_EXCLUSIVE' ? 'Campaign' : tier + ' Tier Campaign'}\n`;
-    urlsList += `Generated: ${new Date().toLocaleString()}\n`;
-    urlsList += `Total Assets: ${eligibleFiles.length}\n`;
-    urlsList += `\n${'='.repeat(80)}\n\n`;
+    // === Generate XLS file ===
+    const wb = XLSX.utils.book_new();
 
-    for (const fileData of eligibleFiles) {
-      urlsList += `File: ${fileData.fileName}\n`;
-      urlsList += `Dimensions: ${fileData.file.dimensions}\n`;
-      urlsList += `Size: ${fileData.file.sizeKB} KB\n`;
-      urlsList += `Compatible Placements:\n`;
+    // Create worksheet data with headers
+    const wsData = [
+      ['Campaign', 'Content', 'Formát', 'Rozměr', 'Stopáž', 'Služba', 'Source', 'Medium', 'Landing page', 'Ukotvení', 'Název banneru', 'URL']
+    ];
 
-      for (const placement of fileData.placements) {
-        urlsList += `  - ${placement.formatDisplay}\n`;
-        urlsList += `    Spec: ${placement.spec.name}\n`;
-        urlsList += `    ${placement.spec.width}x${placement.spec.height}`;
-        if (placement.spec.maxSizeKB) {
-          urlsList += ` (max ${placement.spec.maxSizeKB} KB)`;
-        }
-        urlsList += `\n`;
-      }
+    // For each banner, read form values and add row
+    for (let idx = 0; idx < eligibleFiles.length; idx++) {
+      const fileData = eligibleFiles[idx];
+      const fileId = `${network}_${tier}_${idx}`;
 
-      // Placeholder URL - user should replace with actual campaign URL
-      urlsList += `Upload URL: [TO BE CONFIGURED IN ${network} PLATFORM]\n`;
-      urlsList += `\n${'-'.repeat(80)}\n\n`;
+      // Read current form values from DOM
+      const formatSelect = document.getElementById(`format_${fileId}`);
+      const serviceSelect = document.getElementById(`service_${fileId}`);
+      const anchorInput = document.getElementById(`anchor_${fileId}`);
+
+      const format = formatSelect?.value || 'banner';
+      const service = serviceSelect?.value || 'hp';
+      const anchor = anchorInput?.value || '';
+
+      // Generate URL with current values
+      const url = generateBannerURL({
+        network: network,
+        tier: tier,
+        campaignName: campaignName,
+        contentName: contentName,
+        landingURL: landingURL,
+        dimensions: fileData.file.dimensions,
+        format: format,
+        service: service,
+        anchor: anchor,
+        isZbozi: appState.isZboziCampaign
+      });
+
+      // Extract UTM parameters from generated URL
+      const urlObj = new URL(url);
+      const source = urlObj.searchParams.get('utm_source') || '';
+      const medium = urlObj.searchParams.get('utm_medium') || '';
+
+      // Generate final renamed filename
+      const finalName = generateFinalFilename(fileData.fileName, fileData.file.dimensions, campaignName, network);
+
+      // Add row to worksheet
+      wsData.push([
+        campaignName,              // Campaign
+        contentName,               // Content
+        format,                    // Formát
+        fileData.file.dimensions,  // Rozměr
+        '',                        // Stopáž (empty for images, would be duration for videos)
+        service,                   // Služba
+        source,                    // Source (utm_source)
+        medium,                    // Medium (utm_medium)
+        landingURL,                // Landing page
+        anchor,                    // Ukotvení
+        finalName,                 // Název banneru
+        url                        // URL (complete with UTM params)
+      ]);
     }
 
-    urlsList += `\nNOTE: Please upload each file to the ${network} advertising platform\n`;
-    urlsList += `and configure the campaign settings according to the ${network === 'HP_EXCLUSIVE' ? 'specifications' : tier + ' tier specifications'} listed above.\n`;
+    // Create worksheet from array of arrays
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
 
-    // Add URLs text file
-    zip.file('UPLOAD_INSTRUCTIONS.txt', urlsList);
+    // Optional: Set column widths for better readability
+    ws['!cols'] = [
+      { wch: 25 },  // Campaign
+      { wch: 20 },  // Content
+      { wch: 15 },  // Formát
+      { wch: 12 },  // Rozměr
+      { wch: 10 },  // Stopáž
+      { wch: 12 },  // Služba
+      { wch: 20 },  // Source
+      { wch: 25 },  // Medium
+      { wch: 40 },  // Landing page
+      { wch: 20 },  // Ukotvení
+      { wch: 40 },  // Název banneru
+      { wch: 80 }   // URL
+    ];
+
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(wb, ws, 'URLs');
+
+    // Generate XLSX file as binary array
+    const xlsxData = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+
+    // Add XLSX file to ZIP
+    zip.file('export.xlsx', xlsxData);
 
     // Generate ZIP and download
     const blob = await zip.generateAsync({ type: 'blob' });
     const filename = `${network}_${network === 'HP_EXCLUSIVE' ? 'Package' : tier + '_Tier'}_${Date.now()}.zip`;
     downloadBlob(blob, filename);
 
-    alert(`✅ Balíček úspěšně vyexportován!\n\nObsah:\n- ${eligibleFiles.length} bannerů\n- UPLOAD_INSTRUCTIONS.txt s detaily umístění`);
+    alert(`✅ Balíček úspěšně vyexportován!\n\nObsah:\n- ${eligibleFiles.length} bannerů\n- export.xlsx s URL detaily`);
   } catch (error) {
     console.error('Export error:', error);
+    alert('Chyba při vytváření balíčku: ' + error.message);
+  }
+}
+
+/**
+ * Export all selected networks in a single master ZIP file
+ * Each network will have its own folder with banners and XLSX file
+ */
+async function exportAllNetworksZIP() {
+  try {
+    if (appState.selectedNetworks.length === 0) {
+      alert('Nejsou vybrány žádné systémy k exportu.');
+      return;
+    }
+
+    const campaignName = appState.campaignName || 'campaign';
+    const contentName = appState.contentName || '';
+    const landingURL = appState.landingURL || '';
+
+    // Create master ZIP file
+    const masterZip = new JSZip();
+    let totalBanners = 0;
+    let totalNetworks = 0;
+
+    // Process each selected network
+    for (const selection of appState.selectedNetworks) {
+      const network = selection.network;
+      const tiers = network === 'HP_EXCLUSIVE' ? ['NONE'] : ['LOW', 'HIGH'];
+
+      for (const tier of tiers) {
+        // Get eligible files for this network and tier
+        const eligibleFiles = [];
+        for (const [fileName, validation] of Object.entries(appState.validationResults)) {
+          if (!selection.selectedBanners || !selection.selectedBanners.includes(fileName)) {
+            continue;
+          }
+
+          const matches = validation.compatible.filter(c =>
+            c.network === network && (c.tier === tier || (network === 'HP_EXCLUSIVE' && !c.tier))
+          );
+
+          if (matches.length > 0) {
+            eligibleFiles.push({
+              fileName,
+              file: validation.file,
+              placements: matches
+            });
+          }
+        }
+
+        if (eligibleFiles.length === 0) continue;
+
+        // Create folder for this network/tier
+        const folderName = network === 'HP_EXCLUSIVE' ? network : `${network}_${tier}`;
+        const networkFolder = masterZip.folder(folderName);
+
+        // Add banner files with renamed names
+        for (const fileData of eligibleFiles) {
+          const finalName = generateFinalFilename(fileData.fileName, fileData.file.dimensions, campaignName, network);
+          networkFolder.file(finalName, fileData.file.file);
+        }
+
+        // === Generate XLS file for this network/tier ===
+        const wb = XLSX.utils.book_new();
+        const wsData = [
+          ['Campaign', 'Content', 'Formát', 'Rozměr', 'Stopáž', 'Služba', 'Source', 'Medium', 'Landing page', 'Ukotvení', 'Název banneru', 'URL']
+        ];
+
+        // For each banner, read form values and add row
+        for (let idx = 0; idx < eligibleFiles.length; idx++) {
+          const fileData = eligibleFiles[idx];
+          const fileId = `${network}_${tier}_${idx}`;
+
+          // Read current form values from DOM
+          const formatSelect = document.getElementById(`format_${fileId}`);
+          const serviceSelect = document.getElementById(`service_${fileId}`);
+          const anchorInput = document.getElementById(`anchor_${fileId}`);
+
+          const format = formatSelect?.value || 'banner';
+          const service = serviceSelect?.value || 'hp';
+          const anchor = anchorInput?.value || '';
+
+          // Generate URL with current values
+          const url = generateBannerURL({
+            network: network,
+            tier: tier,
+            campaignName: campaignName,
+            contentName: contentName,
+            landingURL: landingURL,
+            dimensions: fileData.file.dimensions,
+            format: format,
+            service: service,
+            anchor: anchor,
+            isZbozi: appState.isZboziCampaign
+          });
+
+          // Extract UTM parameters from generated URL
+          const urlObj = new URL(url);
+          const source = urlObj.searchParams.get('utm_source') || '';
+          const medium = urlObj.searchParams.get('utm_medium') || '';
+
+          // Generate final renamed filename
+          const finalName = generateFinalFilename(fileData.fileName, fileData.file.dimensions, campaignName, network);
+
+          // Add row to worksheet
+          wsData.push([
+            campaignName,
+            contentName,
+            format,
+            fileData.file.dimensions,
+            '',
+            service,
+            source,
+            medium,
+            landingURL,
+            anchor,
+            finalName,
+            url
+          ]);
+        }
+
+        // Create worksheet
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        ws['!cols'] = [
+          { wch: 25 }, { wch: 20 }, { wch: 15 }, { wch: 12 }, { wch: 10 }, { wch: 12 },
+          { wch: 20 }, { wch: 25 }, { wch: 40 }, { wch: 20 }, { wch: 40 }, { wch: 80 }
+        ];
+
+        XLSX.utils.book_append_sheet(wb, ws, 'URLs');
+
+        // Generate XLSX file as binary array
+        const xlsxData = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+
+        // Add XLSX file to network folder
+        networkFolder.file('export.xlsx', xlsxData);
+
+        totalBanners += eligibleFiles.length;
+        totalNetworks++;
+      }
+    }
+
+    if (totalNetworks === 0) {
+      alert('Žádné bannery k exportu.');
+      return;
+    }
+
+    // Generate master ZIP and download
+    const blob = await masterZip.generateAsync({ type: 'blob' });
+    const safeCampaignName = campaignName.replace(/[^a-zA-Z0-9-_]/g, '_').toLowerCase();
+    const filename = `${safeCampaignName}_all_networks_${Date.now()}.zip`;
+    downloadBlob(blob, filename);
+
+    alert(`✅ Všechny balíčky úspěšně vyexportovány!\n\nObsah:\n- ${totalNetworks} systémů\n- ${totalBanners} celkem bannerů\n\nKaždý systém má vlastní složku s bannery a export.xlsx souborem.`);
+  } catch (error) {
+    console.error('Export all error:', error);
     alert('Chyba při vytváření balíčku: ' + error.message);
   }
 }
@@ -1670,6 +2552,7 @@ window.removeFile = removeFile;
 window.validateCompatibility = validateCompatibility;
 window.showFileDetails = showFileDetails;
 window.toggleNetworkSelection = toggleNetworkSelection;
+window.updateBannerSelection = updateBannerSelection;
 window.toggleExportPreview = toggleExportPreview;
 window.toggleValidCreatives = toggleValidCreatives;
 window.toggleNetworkErrors = toggleNetworkErrors;
@@ -1678,5 +2561,6 @@ window.updateExportPreview = updateExportPreview;
 window.updateBannerURL = updateBannerURL;
 window.copyURL = copyURL;
 window.displayExportSettings = displayExportSettings;
+window.toggleHighTierSection = toggleHighTierSection;
 window.exportNetworkZIP = exportNetworkZIP;
 window.exportCSV = exportCSV;
