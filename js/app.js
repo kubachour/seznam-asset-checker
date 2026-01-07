@@ -102,6 +102,9 @@ document.addEventListener('DOMContentLoaded', () => {
     versionElement.textContent = APP_VERSION;
   }
 
+  // Load saved campaign settings
+  loadCampaignSettingsFromStorage();
+
   // Setup event listeners
   setupEventListeners();
 
@@ -414,6 +417,9 @@ function updateExportPreview() {
     <div style="margin-bottom: 8px;"><strong>Příklad pro SOS ${appState.selectedCampaignTier} banner ${exampleDimensions}:</strong></div>
     <div style="color: #3b82f6;">${sampleURL}</div>
   `;
+
+  // Save to localStorage
+  saveCampaignSettingsToStorage();
 }
 
 // =============================================================================
@@ -541,6 +547,90 @@ function extractYear(campaignName) {
 
   // Fallback to current year
   return new Date().getFullYear().toString();
+}
+
+/**
+ * Save campaign settings form values to localStorage
+ */
+function saveCampaignSettingsToStorage() {
+  const settings = {
+    campaignName: document.getElementById('campaignName')?.value || '',
+    contentName: document.getElementById('contentName')?.value || '',
+    landingURL: document.getElementById('landingURL')?.value || '',
+    zboziToggle: document.getElementById('zboziToggle')?.checked || false,
+    campaignStartDate: document.getElementById('campaignStartDate')?.value || '',
+    campaignEndDate: document.getElementById('campaignEndDate')?.value || ''
+  };
+
+  try {
+    localStorage.setItem('campaignSettings', JSON.stringify(settings));
+  } catch (e) {
+    console.warn('Failed to save settings to localStorage:', e);
+  }
+}
+
+/**
+ * Load campaign settings form values from localStorage
+ */
+function loadCampaignSettingsFromStorage() {
+  try {
+    const savedSettings = localStorage.getItem('campaignSettings');
+    if (!savedSettings) return;
+
+    const settings = JSON.parse(savedSettings);
+
+    // Restore text fields
+    const campaignNameInput = document.getElementById('campaignName');
+    const contentNameInput = document.getElementById('contentName');
+    const landingURLInput = document.getElementById('landingURL');
+    const zboziToggleInput = document.getElementById('zboziToggle');
+    const startDateInput = document.getElementById('campaignStartDate');
+    const endDateInput = document.getElementById('campaignEndDate');
+
+    if (campaignNameInput && settings.campaignName) {
+      campaignNameInput.value = settings.campaignName;
+    }
+
+    if (contentNameInput && settings.contentName) {
+      contentNameInput.value = settings.contentName;
+    }
+
+    if (landingURLInput && settings.landingURL) {
+      landingURLInput.value = settings.landingURL;
+    }
+
+    if (zboziToggleInput && settings.zboziToggle !== undefined) {
+      zboziToggleInput.checked = settings.zboziToggle;
+
+      // Show/hide date fields based on toggle state
+      const zboziDateFields = document.getElementById('zboziDateFields');
+      if (zboziDateFields) {
+        zboziDateFields.style.display = settings.zboziToggle ? 'block' : 'none';
+      }
+    }
+
+    if (startDateInput && settings.campaignStartDate) {
+      startDateInput.value = settings.campaignStartDate;
+    }
+
+    if (endDateInput && settings.campaignEndDate) {
+      endDateInput.value = settings.campaignEndDate;
+    }
+
+    // Sync to appState
+    appState.campaignName = settings.campaignName || '';
+    appState.contentName = settings.contentName || '';
+    appState.landingURL = settings.landingURL || '';
+    appState.isZboziCampaign = settings.zboziToggle || false;
+
+    // Update preview if on step 3
+    if (appState.currentStep === 3) {
+      updateExportPreview();
+    }
+
+  } catch (e) {
+    console.warn('Failed to load settings from localStorage:', e);
+  }
 }
 
 /**
