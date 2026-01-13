@@ -14,10 +14,11 @@
     <!-- Progress Steps -->
     <div class="steps">
       <div class="step active clickable" data-step="1" onclick="handleStepClick(1)">1. Nahrát bannery</div>
-      <div class="step clickable" data-step="2" onclick="handleStepClick(2)">2. Výsledek validace</div>
-      <div class="step clickable" data-step="3" onclick="handleStepClick(3)">3. Nastavení exportu</div>
-      <div class="step clickable" data-step="4" onclick="handleStepClick(4)">4. Vybrat systémy</div>
-      <div class="step clickable" data-step="5" onclick="handleStepClick(5)">5. Export</div>
+      <div class="step clickable" data-step="2" onclick="handleStepClick(2)">2. Validace podle tabulky</div>
+      <div class="step clickable" data-step="3" onclick="handleStepClick(3)">3. Validace pro systémy</div>
+      <div class="step clickable" data-step="4" onclick="handleStepClick(4)">4. Nastavení exportu</div>
+      <div class="step clickable" data-step="5" onclick="handleStepClick(5)">5. Vybrat systémy</div>
+      <div class="step clickable" data-step="6" onclick="handleStepClick(6)">6. Export</div>
     </div>
 
     <!-- Step 1: Upload Banners -->
@@ -27,7 +28,8 @@
       <div class="info-box" id="uploadInfoBox">
         <strong>📦 Podporované formáty:</strong>
         <ul>
-          <li>JPG, PNG, GIF</li>
+          <li>JPG, PNG, GIF, WebP, AVIF</li>
+          <li>HTML5 bannery (ZIP archiv s index.html)</li>
           <li>ZIP archivy (automaticky rozbalí obrázky)</li>
           <li>Složky (rekurzivně prohledá všechny obrázky)</li>
         </ul>
@@ -39,7 +41,7 @@
           <strong>Přetáhněte bannery, složky nebo ZIP soubory</strong>
           <span>nebo klikněte pro výběr</span>
         </div>
-        <input type="file" id="fileInput" multiple accept=".jpg,.jpeg,.png,.gif,.zip" style="display: none;">
+        <input type="file" id="fileInput" multiple accept=".jpg,.jpeg,.png,.gif,.webp,.avif,.zip" style="display: none;">
       </div>
 
       <div id="uploadProgress" class="upload-progress-container" style="display: none;">
@@ -51,25 +53,106 @@
 
       <div id="uploadedFiles" class="uploaded-files-list"></div>
 
+      <!-- Optional: Campaign Table -->
+      <div class="campaign-table-section" style="margin-top: 30px; padding: 20px; background: #f9fafb; border: 2px dashed #d1d5db; border-radius: 8px; text-align: center;">
+        <div style="font-size: 48px; margin-bottom: 15px;">📊</div>
+        <div style="margin-bottom: 15px;">
+          <strong style="display: block; font-size: 18px; color: #1a202c; margin-bottom: 8px;">Volitelné: Kampaňová tabulka</strong>
+        </div>
+        <p style="color: #718096; margin-bottom: 15px; font-size: 14px;">
+          Zkopíruj jen první tři sloupce kampaňové tabulky, nic víc vole. <strong>Jméno kreativy, Rozměry, velikost v KB.</strong>
+        </p>
+
+        <!-- Example Table -->
+        <details style="margin-bottom: 15px; cursor: pointer;">
+          <summary style="color: #3b82f6; font-weight: 600; font-size: 14px; list-style: none; user-select: none;">
+            ► Ukázat příklad tabulky
+          </summary>
+          <div style="margin-top: 10px; padding: 15px; background: white; border: 1px solid #e5e7eb; border-radius: 6px; font-family: 'Courier New', monospace; font-size: 13px; overflow-x: auto;">
+            <table style="border-collapse: collapse; width: 100%;">
+              <thead>
+                <tr style="background: #f3f4f6; font-weight: 600;">
+                  <td style="padding: 8px; border: 1px solid #d1d5db;">Druh</td>
+                  <td style="padding: 8px; border: 1px solid #d1d5db;">Rozměry</td>
+                  <td style="padding: 8px; border: 1px solid #d1d5db;">Velikost</td>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style="padding: 8px; border: 1px solid #e5e7eb;">Banner statika</td>
+                  <td style="padding: 8px; border: 1px solid #e5e7eb;">300x250</td>
+                  <td style="padding: 8px; border: 1px solid #e5e7eb;">150 kb</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px; border: 1px solid #e5e7eb;"></td>
+                  <td style="padding: 8px; border: 1px solid #e5e7eb;">480x300</td>
+                  <td style="padding: 8px; border: 1px solid #e5e7eb;"></td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px; border: 1px solid #e5e7eb;"></td>
+                  <td style="padding: 8px; border: 1px solid #e5e7eb;">970x210</td>
+                  <td style="padding: 8px; border: 1px solid #e5e7eb;"></td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px; border: 1px solid #e5e7eb;">Kombinovaná reklama</td>
+                  <td style="padding: 8px; border: 1px solid #e5e7eb;">1200x628</td>
+                  <td style="padding: 8px; border: 1px solid #e5e7eb;">1 MB</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px; border: 1px solid #e5e7eb;"></td>
+                  <td style="padding: 8px; border: 1px solid #e5e7eb;">1200x1200</td>
+                  <td style="padding: 8px; border: 1px solid #e5e7eb;"></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+
+        <textarea
+          id="campaignTableInput"
+          placeholder="Zkopíruj tabulku z Excelu a vlož sem..."
+          style="width: 100%; min-height: 150px; padding: 12px; font-family: 'Courier New', monospace; font-size: 13px; border: 1px solid #d1d5db; border-radius: 6px; resize: vertical;"
+        ></textarea>
+
+        <button class="btn-secondary" onclick="parseCampaignTable()" style="margin-top: 10px;">
+          📋 Zpracovat tabulku
+        </button>
+
+        <div id="tableParseResult" style="margin-top: 10px; display: none;"></div>
+      </div>
+
       <div class="nav-buttons">
         <button class="btn-primary" id="analyzeBtn" onclick="validateCompatibility()" disabled>Další: Zobrazit kompatibilní systémy →</button>
       </div>
     </div>
 
-    <!-- Step 2: Validation Results -->
-    <div class="section" id="step2" data-step-name="validation">
-      <h2 class="step-heading">Výsledek validace</h2>
+    <!-- Step 2: Campaign Table Validation -->
+    <div class="section" id="step2" data-step-name="table-validation">
+      <h2 class="step-heading">Validace podle tabulky</h2>
+      <p class="subtitle">Kontrola nahraných bannerů proti kampaňovým požadavkům</p>
+
+      <div id="tableValidationResults" class="table-validation-container"></div>
+
+      <div class="nav-buttons">
+        <button class="btn-secondary" onclick="goToStep(1)">← Zpět</button>
+        <button class="btn-primary" onclick="goToStep(3)">Další: Validace pro systémy →</button>
+      </div>
+    </div>
+
+    <!-- Step 3: System Validation Results -->
+    <div class="section" id="step3" data-step-name="system-validation">
+      <h2 class="step-heading">Validace pro systémy</h2>
 
       <div id="networkToggles" class="validation-results-container"></div>
 
       <div class="nav-buttons">
-        <button class="btn-secondary" onclick="goToStep(1)">← Zpět</button>
-        <button class="btn-primary" id="reviewBtn" onclick="goToStep(3)">Další: Nastavení exportu →</button>
+        <button class="btn-secondary" onclick="goToStep(2)">← Zpět</button>
+        <button class="btn-primary" id="reviewBtn" onclick="goToStep(4)">Další: Nastavení exportu →</button>
       </div>
     </div>
 
-    <!-- Step 3: Export Settings -->
-    <div class="section" id="step3" data-step-name="export-settings">
+    <!-- Step 4: Export Settings -->
+    <div class="section" id="step4" data-step-name="export-settings">
       <h2 class="step-heading">Nastavení exportu</h2>
       <p class="subtitle">Nastavte globální parametry pro export. Jednotlivé bannery můžete upravit v kroku 5.</p>
 
@@ -126,26 +209,26 @@
       </div>
 
       <div class="nav-buttons">
-        <button class="btn-secondary" onclick="goToStep(2)">← Zpět</button>
-        <button class="btn-primary" onclick="goToStep(4)">Další: Výběr systémů →</button>
+        <button class="btn-secondary" onclick="goToStep(3)">← Zpět</button>
+        <button class="btn-primary" onclick="goToStep(5)">Další: Výběr systémů →</button>
       </div>
     </div>
 
-    <!-- Step 4: Select Networks -->
-    <div class="section" id="step4" data-step-name="network-selection">
+    <!-- Step 5: Select Networks -->
+    <div class="section" id="step5" data-step-name="network-selection">
       <h2 class="step-heading">Výběr systémů</h2>
       <p class="subtitle">Vyber prosím systém pro přejmenování bannerů a export URL.</p>
 
       <div id="networkSelection" class="network-selection-container"></div>
 
       <div class="nav-buttons">
-        <button class="btn-secondary" onclick="goToStep(3)">← Zpět</button>
-        <button class="btn-primary" id="exportBtn" onclick="goToStep(5)">Další: Export →</button>
+        <button class="btn-secondary" onclick="goToStep(4)">← Zpět</button>
+        <button class="btn-primary" id="exportBtn" onclick="goToStep(6)">Další: Export →</button>
       </div>
     </div>
 
-    <!-- Step 5: Export -->
-    <div class="section" id="step5" data-step-name="export">
+    <!-- Step 6: Export -->
+    <div class="section" id="step6" data-step-name="export">
       <h2 class="step-heading">Export bannerů</h2>
 
       <!-- Export Options Per Network -->
@@ -163,7 +246,7 @@
       </div>
 
       <div class="nav-buttons">
-        <button class="btn-secondary" onclick="goToStep(4)">← Zpět</button>
+        <button class="btn-secondary" onclick="goToStep(5)">← Zpět</button>
         <button class="btn-primary" onclick="location.reload()">Nová validace</button>
       </div>
     </div>
@@ -172,7 +255,9 @@
   <!-- Version Footer -->
   <footer class="app-footer">
     <div class="version-info">
-      <span id="appVersion">v1.0.1</span>
+      <span id="appVersion">v1.0.4</span>
+      <span style="margin: 0 10px; color: #d1d5db;">•</span>
+      <a href="formaty.html" style="color: #3b82f6; text-decoration: none; font-weight: 500;">📊 Přehled formátů</a>
     </div>
   </footer>
 
@@ -180,6 +265,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
   <script src="js/specs-rules.js"></script>
+  <script src="js/html5-validator.js"></script>
   <script src="js/file-analyzer.js"></script>
   <script src="js/app.js"></script>
 </body>

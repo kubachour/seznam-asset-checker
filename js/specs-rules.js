@@ -128,16 +128,25 @@ const CREATIVE_SPECS = {
     'branding': {
       name: 'Branding',
       dimensions: ['2560x1440'],
-      maxSize: 500,
-      formats: ['jpg', 'png', 'gif'],
+      maxSize: 600, // Updated to 600 KB
+      formats: ['jpg', 'png', 'gif', 'html5'],
       device: 'Desktop',
       tier: ['HIGH', 'LOW'],
-      notes: 'Potřeba důkladně pročíst požadavky v odkaze'
+      notes: 'Main message: 1366×720px upper area. Podporuje HTML5. Video panel option: MP4, 720p, max 100MB, 60s.'
+    },
+    'branding-sklik': {
+      name: 'Branding Sklik',
+      dimensions: ['2000x1400'],
+      maxSize: 500, // KB
+      formats: ['jpg', 'png', 'gif', 'webp', 'avif'],
+      device: 'Desktop',
+      tier: ['HIGH', 'LOW'],
+      notes: 'Safe area: 1366×720px (top placement). Protective margin: 100px from edges. Image cannot be transparent.'
     },
     'branding-scratcher': {
       name: 'Branding Scratcher',
       dimensions: ['2560x1440'],
-      maxSize: 500,
+      maxSize: 600, // Updated to 600 KB
       formats: ['jpg'], // Only JPG
       device: 'Desktop',
       tier: ['HIGH', 'LOW'],
@@ -146,7 +155,7 @@ const CREATIVE_SPECS = {
     'branding-uncover': {
       name: 'Branding Uncover',
       dimensions: ['2560x1440'],
-      maxSize: 500,
+      maxSize: 600, // Updated to 600 KB
       formats: ['jpg', 'png', 'gif'], // Non-animated GIF only
       device: 'Desktop',
       tier: ['HIGH', 'LOW'],
@@ -155,10 +164,19 @@ const CREATIVE_SPECS = {
       fileRoles: ['cover', 'uncover'],
       notes: 'Dvě kreativy: cover a uncover, potřeba důkladně pročíst požadavky v odkaze'
     },
+    'nativni-inzerat': {
+      name: 'Nativní inzerát (In-article)',
+      dimensions: ['640x480', '338x190', '400x300', '800x533'],
+      maxSize: 300,
+      formats: ['jpg', 'png'],
+      device: 'Desktop/Mobil',
+      tier: ['HIGH', 'LOW'],
+      notes: 'In-article placement. Various dimensions supported.'
+    },
     'spincube': {
       name: 'Spincube',
       dimensions: ['480x480'],
-      maxSize: 100,
+      maxSize: 250, // 250 KB per image
       formats: ['jpg', 'png', 'gif'], // Non-animated GIF only
       device: 'Mobil',
       tier: ['HIGH', 'LOW'],
@@ -170,11 +188,23 @@ const CREATIVE_SPECS = {
     'mobilni-interscroller': {
       name: 'Mobilní Interscroller',
       dimensions: ['720x1280'],
-      maxSize: 200,
-      formats: ['jpg', 'png', 'gif'],
+      maxSize: 250,
+      formats: ['jpg', 'png', 'gif', 'webp', 'avif'],
       device: 'Mobil',
       tier: ['HIGH', 'LOW'],
-      notes: 'Potřeba důkladně pročíst požadavky v odkaze'
+      notes: 'Safe zone: 700×920px for main message. Podporuje HTML5.'
+    },
+    'spinner': {
+      name: 'Spinner (Skyscraper)',
+      dimensions: ['300x600'],
+      maxSize: 250, // KB
+      formats: ['jpg', 'png', 'gif'], // Non-animated GIF only
+      device: 'Desktop',
+      tier: ['HIGH', 'LOW'],
+      multiFile: true,
+      fileCount: 4,
+      fileRoles: ['side1', 'side2', 'side3', 'side4'],
+      notes: '4× 300×600 banners required (or 2 used twice). Each can have different target URL. Must be visually distinct from page content.'
     }
   },
 
@@ -286,12 +316,12 @@ const CREATIVE_SPECS = {
     },
     'kombi': {
       name: 'Nativní inzerát / Kombi',
-      dimensions: ['1200x628', '1200x1200'],
+      dimensions: ['1200x628', '1200x1200', '600x314', '300x300'],
       maxSize: 1024, // 1 MB
-      formats: ['jpg', 'png'],
+      formats: ['jpg', 'png', 'gif', 'webp', 'avif'],
       device: 'Desktop/Mobil',
       tier: ['HIGH', 'LOW'],
-      notes: 'Banner bez textu (pro nativ)'
+      notes: 'Banner bez textu (pro nativ). Min: 600×314 (rect) / 300×300 (square). Recommended: 1200×628 / 1200×1200. Max: 4000px width/height.'
     },
     'leaderboard-middle': {
       name: 'Leaderboard middle',
@@ -316,6 +346,15 @@ const CREATIVE_SPECS = {
       formats: ['jpg', 'png', 'gif'],
       device: 'Desktop',
       tier: ['HIGH', 'LOW']
+    },
+    'mobilni-interscroller': {
+      name: 'Mobilní Interscroller',
+      dimensions: ['720x1280'],
+      maxSize: 250,
+      formats: ['jpg', 'png', 'gif', 'webp', 'avif'],
+      device: 'Mobil',
+      tier: ['HIGH', 'LOW'],
+      notes: 'Safe zone: 700×920px for main message. Podporuje HTML5.'
     }
   },
 
@@ -338,28 +377,28 @@ const CREATIVE_SPECS = {
       name: 'Exclusive Desktop - Banner (varianta A)',
       dimensions: ['1100x500'],
       maxSize: 300,
-      formats: ['jpg', 'png', 'gif'],
+      formats: ['jpg', 'png', 'gif', 'html5'],
       device: 'Desktop',
       multiFile: true,
       fileRoles: ['banner'],
       pairedWith: 'exclusive-desktop-trigger',
-      notes: 'Hlavní banner pro Exclusive s obrázkem'
+      notes: 'Hlavní banner pro Exclusive. Image max 300KB, HTML5 max 1MB. Video variant: background 1100×500, poster 1280×720, video MP4 720p max 100MB.'
     },
     'exclusive-mobile-wallpaper': {
       name: 'Exclusive wallpaper (varianta A)',
       dimensions: ['480x300'],
       maxSize: 200,
-      formats: ['jpg', 'png', 'gif'],
+      formats: ['jpg', 'png', 'gif', 'html5'],
       device: 'Mobil',
-      notes: 'Mobilní wallpaper pro Exclusive'
+      notes: 'Mobilní wallpaper pro Exclusive. Image max 200KB, HTML5 max 300KB.'
     },
     'exclusive-mobile-square': {
       name: 'Exclusive mobilní square premium (varianta B)',
       dimensions: ['480x480'],
       maxSize: 200,
-      formats: ['jpg', 'png', 'gif'],
+      formats: ['jpg', 'png', 'gif', 'html5'],
       device: 'Mobil',
-      notes: 'Mobilní square premium pro Exclusive'
+      notes: 'Mobilní square premium pro Exclusive. Image max 200KB, HTML5 max 300KB.'
     },
     'exclusive-app-wallpaper': {
       name: 'Exclusive wallpaper (varianta A)',
@@ -376,6 +415,96 @@ const CREATIVE_SPECS = {
       formats: ['jpg', 'png', 'gif'],
       device: 'Aplikace',
       notes: 'Aplikační square premium pro Exclusive'
+    }
+  },
+
+  // =============================================================================
+  // GOOGLE ADS SPECIFICATIONS (No tier - validation only)
+  // =============================================================================
+  GOOGLE_ADS: {
+    'square-small': {
+      name: 'Small Square',
+      dimensions: ['200x200'],
+      maxSize: 150,
+      formats: ['jpg', 'png', 'gif'],
+      device: 'Desktop/Mobil'
+    },
+    'square': {
+      name: 'Square',
+      dimensions: ['250x250'],
+      maxSize: 150,
+      formats: ['jpg', 'png', 'gif'],
+      device: 'Desktop/Mobil'
+    },
+    'banner': {
+      name: 'Banner',
+      dimensions: ['468x60'],
+      maxSize: 150,
+      formats: ['jpg', 'png', 'gif'],
+      device: 'Desktop/Mobil'
+    },
+    'leaderboard': {
+      name: 'Leaderboard',
+      dimensions: ['728x90'],
+      maxSize: 150,
+      formats: ['jpg', 'png', 'gif'],
+      device: 'Desktop/Mobil'
+    },
+    'inline-rectangle': {
+      name: 'Inline Rectangle',
+      dimensions: ['300x250'],
+      maxSize: 150,
+      formats: ['jpg', 'png', 'gif'],
+      device: 'Desktop/Mobil'
+    },
+    'large-rectangle': {
+      name: 'Large Rectangle',
+      dimensions: ['336x280'],
+      maxSize: 150,
+      formats: ['jpg', 'png', 'gif'],
+      device: 'Desktop/Mobil'
+    },
+    'skyscraper': {
+      name: 'Skyscraper',
+      dimensions: ['120x600'],
+      maxSize: 150,
+      formats: ['jpg', 'png', 'gif'],
+      device: 'Desktop'
+    },
+    'wide-skyscraper': {
+      name: 'Wide Skyscraper',
+      dimensions: ['160x600'],
+      maxSize: 150,
+      formats: ['jpg', 'png', 'gif'],
+      device: 'Desktop'
+    },
+    'half-page': {
+      name: 'Half Page',
+      dimensions: ['300x600'],
+      maxSize: 150,
+      formats: ['jpg', 'png', 'gif'],
+      device: 'Desktop'
+    },
+    'large-leaderboard': {
+      name: 'Large Leaderboard',
+      dimensions: ['970x250'],
+      maxSize: 150,
+      formats: ['jpg', 'png', 'gif'],
+      device: 'Desktop'
+    },
+    'mobile-banner': {
+      name: 'Mobile Banner',
+      dimensions: ['320x50'],
+      maxSize: 150,
+      formats: ['jpg', 'png', 'gif'],
+      device: 'Mobil'
+    },
+    'mobile-leaderboard': {
+      name: 'Mobile Leaderboard',
+      dimensions: ['320x100'],
+      maxSize: 150,
+      formats: ['jpg', 'png', 'gif'],
+      device: 'Mobil'
     }
   }
 };
@@ -396,9 +525,18 @@ const FORMAT_NAME_MAP = {
   '728x90': 'banner',
   '320x100': 'banner',
   '160x600': 'banner',
+  '120x600': 'banner',
+  '970x250': 'banner',
+  '320x50': 'banner',
+  '468x60': 'banner',
+  '336x280': 'banner',
+  '250x250': 'banner',
+  '200x200': 'banner',
+  '600x314': 'banner',
 
   // Special formats → specific names
   '2560x1440': 'branding',
+  '2000x1400': 'branding-sklik',
   '720x1280': 'interscroller',
   '1200x628': 'kombi',
   '1200x1200': 'kombi',
@@ -421,8 +559,10 @@ function getFormatDisplayName(dimensions, specKey) {
   if (specKey && specKey.includes('branding-scratcher')) return 'scratcher';
   if (specKey && specKey.includes('branding-uncover')) return 'uncover';
   if (specKey && specKey.includes('branding-videopanel')) return 'branding-videopanel';
+  if (specKey && specKey.includes('branding-sklik')) return 'branding-sklik';
   if (specKey && specKey.includes('branding')) return 'branding';
   if (specKey && specKey.includes('interscroller')) return 'interscroller';
+  if (specKey && specKey.includes('spinner')) return 'spinner';
   if (specKey && specKey.includes('spincube')) return 'spincube';
   if (specKey && specKey.includes('kombi')) return 'kombi';
   if (specKey && specKey.includes('exclusive')) {
@@ -502,6 +642,34 @@ function findMatchingFormats(fileData, network = null, tier = null) {
 function validateFileForFormat(fileData, formatSpec) {
   const issues = [];
 
+  // Special handling for HTML5 banners
+  if (fileData.isHTML5 && fileData.html5Validation) {
+    // Check dimensions
+    if (!formatSpec.dimensions.includes(fileData.dimensions)) {
+      issues.push(`Dimension ${fileData.dimensions} not supported (expected: ${formatSpec.dimensions.join(' or ')})`);
+    }
+
+    // Check size limit (with 5% tolerance)
+    const sizeLimit = formatSpec.maxSize;
+    const fileSize = fileData.sizeKB;
+    const toleranceMultiplier = 1.05; // 5% tolerance for file size
+
+    if (fileSize > sizeLimit * toleranceMultiplier) {
+      issues.push(`File size ${fileSize}KB exceeds ${sizeLimit}KB limit (${Math.round(sizeLimit * toleranceMultiplier)}KB with 5% tolerance)`);
+    }
+
+    // Add HTML5 validation issues
+    if (!fileData.html5Validation.valid) {
+      issues.push(...fileData.html5Validation.issues);
+    }
+
+    return {
+      valid: issues.length === 0,
+      issues: issues
+    };
+  }
+
+  // Standard validation for image files
   // Check dimensions
   if (!formatSpec.dimensions.includes(fileData.dimensions)) {
     issues.push(`Dimension ${fileData.dimensions} not supported (expected: ${formatSpec.dimensions.join(' or ')})`);
@@ -513,12 +681,13 @@ function validateFileForFormat(fileData, formatSpec) {
     issues.push(`Format ${fileFormat} not allowed (allowed: ${formatSpec.formats.join(', ')})`);
   }
 
-  // Check size limit
+  // Check size limit (with 5% tolerance)
   const sizeLimit = formatSpec.maxSize;
   const fileSize = fileData.sizeKB;
+  const toleranceMultiplier = 1.05; // 5% tolerance for file size
 
-  if (fileSize > sizeLimit) {
-    issues.push(`File size ${fileSize}KB exceeds ${sizeLimit}KB limit`);
+  if (fileSize > sizeLimit * toleranceMultiplier) {
+    issues.push(`File size ${fileSize}KB exceeds ${sizeLimit}KB limit (${Math.round(sizeLimit * toleranceMultiplier)}KB with 5% tolerance)`);
   }
 
   // Check color space
@@ -568,41 +737,149 @@ function detectMultiFileFormats(allFiles) {
   }
 
   // Check for Spincube (4x 480x480)
+  // First, identify Spincube files by name/folder, then by dimension
   const spincubeFiles = allFiles.filter(f => f.dimensions === '480x480');
-  if (spincubeFiles.length >= 4) {
-    // Group in sets of 4
-    for (let i = 0; i < Math.floor(spincubeFiles.length / 4) * 4; i += 4) {
+  const groupedSpincube = [];
+  const ungroupedSpincube = [];
+
+  // Group by folder path or filename containing "spincube"
+  const spincubeByFolder = {};
+  for (const file of spincubeFiles) {
+    const fileName = (file.name || '').toLowerCase();
+    const folderPath = (file.folderPath || '').toLowerCase();
+
+    // Check if filename or folder contains "spincube"
+    if (fileName.includes('spincube') || folderPath.includes('spincube')) {
+      // Group by folder path
+      const key = file.folderPath || 'root';
+      if (!spincubeByFolder[key]) {
+        spincubeByFolder[key] = [];
+      }
+      spincubeByFolder[key].push(file);
+    } else {
+      ungroupedSpincube.push(file);
+    }
+  }
+
+  // Process named/folder-grouped Spincube sets
+  for (const folderKey in spincubeByFolder) {
+    const files = spincubeByFolder[folderKey];
+    if (files.length === 4) {
       multiFileGroups.push({
         format: 'spincube',
         network: 'SOS',
-        files: spincubeFiles.slice(i, i + 4),
+        files: files,
+        complete: true,
+        requiredCount: 4,
+        roles: ['banner', 'banner', 'banner', 'banner']
+      });
+    } else {
+      // Incomplete Spincube set
+      multiFileGroups.push({
+        format: 'spincube',
+        network: 'SOS',
+        files: files,
+        complete: false,
+        requiredCount: 4,
+        roles: ['banner', 'banner', 'banner', 'banner']
+      });
+    }
+  }
+
+  // Process ungrouped 480x480 files (fallback to old logic)
+  if (ungroupedSpincube.length >= 4) {
+    // Group in sets of 4
+    for (let i = 0; i < Math.floor(ungroupedSpincube.length / 4) * 4; i += 4) {
+      multiFileGroups.push({
+        format: 'spincube',
+        network: 'SOS',
+        files: ungroupedSpincube.slice(i, i + 4),
         complete: true,
         requiredCount: 4,
         roles: ['banner', 'banner', 'banner', 'banner']
       });
     }
     // If remaining files (less than 4), incomplete
-    const remaining = spincubeFiles.length % 4;
+    const remaining = ungroupedSpincube.length % 4;
     if (remaining > 0) {
       multiFileGroups.push({
         format: 'spincube',
         network: 'SOS',
-        files: spincubeFiles.slice(-remaining),
+        files: ungroupedSpincube.slice(-remaining),
         complete: false,
         requiredCount: 4,
         roles: ['banner', 'banner', 'banner', 'banner']
       });
     }
-  } else if (spincubeFiles.length > 0) {
+  } else if (ungroupedSpincube.length > 0) {
     // Less than 4 files, incomplete
     multiFileGroups.push({
       format: 'spincube',
       network: 'SOS',
-      files: spincubeFiles,
+      files: ungroupedSpincube,
       complete: false,
       requiredCount: 4,
       roles: ['banner', 'banner', 'banner', 'banner']
     });
+  }
+
+  // Check for Spinner (4x 300x600)
+  // First, identify Spinner files by name/folder containing "spinner"
+  const skyscraperFiles = allFiles.filter(f => f.dimensions === '300x600');
+  const spinnerByFolder = {};
+  const nonSpinnerSkyscrapers = [];
+
+  for (const file of skyscraperFiles) {
+    const fileName = (file.name || '').toLowerCase();
+    const folderPath = (file.folderPath || '').toLowerCase();
+
+    // Check if filename or folder contains "spinner"
+    if (fileName.includes('spinner') || folderPath.includes('spinner')) {
+      // Group by folder path
+      const key = file.folderPath || 'root';
+      if (!spinnerByFolder[key]) {
+        spinnerByFolder[key] = [];
+      }
+      spinnerByFolder[key].push(file);
+    } else {
+      nonSpinnerSkyscrapers.push(file);
+    }
+  }
+
+  // Process named/folder-grouped Spinner sets
+  for (const folderKey in spinnerByFolder) {
+    const files = spinnerByFolder[folderKey];
+    if (files.length === 4) {
+      multiFileGroups.push({
+        format: 'spinner',
+        network: 'SOS',
+        files: files,
+        complete: true,
+        requiredCount: 4,
+        roles: ['side1', 'side2', 'side3', 'side4']
+      });
+    } else if (files.length === 2) {
+      // 2 images can be used twice for Spinner
+      multiFileGroups.push({
+        format: 'spinner',
+        network: 'SOS',
+        files: files,
+        complete: true,
+        requiredCount: 2,
+        roles: ['side1', 'side2'],
+        notes: 'Using 2 images (will be used twice)'
+      });
+    } else {
+      // Incomplete Spinner set
+      multiFileGroups.push({
+        format: 'spinner',
+        network: 'SOS',
+        files: files,
+        complete: false,
+        requiredCount: 4,
+        roles: ['side1', 'side2', 'side3', 'side4']
+      });
+    }
   }
 
   // Check for HP Exclusive Desktop (461x100 trigger + 1100x500 banner)

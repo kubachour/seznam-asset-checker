@@ -176,7 +176,7 @@ function getFileFormat(file) {
   const mimeType = file.type.toLowerCase();
 
   // Check if it's an image
-  if (['jpg', 'jpeg', 'png', 'gif'].includes(extension) || mimeType.startsWith('image/')) {
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif'].includes(extension) || mimeType.startsWith('image/')) {
     return 'image';
   }
 
@@ -231,10 +231,41 @@ async function analyzeFile(file) {
     height: null,
     colorSpace: 'Unknown',
     colorSpaceValid: true,
-    preview: null
+    preview: null,
+    isHTML5: false,
+    html5Validation: null
   };
 
   try {
+    // Check if this is an HTML5 banner ZIP
+    if (fileType === 'zip' && typeof HTML5Validator !== 'undefined') {
+      const isHTML5 = HTML5Validator.isHTML5BannerByName(file.name) || await HTML5Validator.isHTML5ZIP(file);
+
+      if (isHTML5) {
+        analysis.isHTML5 = true;
+        analysis.fileType = 'html5';
+        analysis.format = 'html5';
+
+        // Validate HTML5 banner
+        const validation = await HTML5Validator.validateHTML5Banner(file);
+        analysis.html5Validation = validation;
+
+        // Extract dimensions from filename if available
+        if (validation.dimensions) {
+          analysis.dimensions = validation.dimensions;
+          const parts = validation.dimensions.split('x');
+          analysis.width = parseInt(parts[0]);
+          analysis.height = parseInt(parts[1]);
+        }
+
+        // Mark as invalid if validation failed
+        if (!validation.valid) {
+          analysis.colorSpaceValid = false; // Use this flag to indicate validation errors
+          analysis.error = validation.issues.join('; ');
+        }
+      }
+    }
+
     // Get dimensions and color space for images only
     if (fileType === 'image') {
       const dims = await readImageDimensions(file);

@@ -5,7 +5,7 @@
  * Generate new filename for a creative file
  * @param {Object} params - Renaming parameters
  * @param {Object} params.fileData - Analyzed file data
- * @param {string} params.network - Network name (ADFORM, SOS, ONEGAR, SKLIK, HP_EXCLUSIVE)
+ * @param {string} params.network - Network name (ADFORM, SOS, ONEGAR, SKLIK, HP_EXCLUSIVE, GOOGLE_ADS)
  * @param {string} params.campaignName - Campaign name
  * @param {string} params.formatName - Format display name (banner, branding, kombi, etc.)
  * @param {string} params.variant - Optional variant (_hp, _obsah, _sport, _trigger, _banner, etc.)

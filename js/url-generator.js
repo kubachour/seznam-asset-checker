@@ -103,7 +103,7 @@ function buildTerm(formatName, variant = null) {
  * Generate complete URL with UTM parameters
  * @param {Object} params - URL generation parameters
  * @param {Object} params.fileData - Analyzed file data
- * @param {string} params.network - Network name (ADFORM, SOS, ONEGAR, SKLIK, HP_EXCLUSIVE)
+ * @param {string} params.network - Network name (ADFORM, SOS, ONEGAR, SKLIK, HP_EXCLUSIVE, GOOGLE_ADS)
  * @param {string} params.tier - Tier level (HIGH, LOW, MKT) or null
  * @param {string} params.campaignName - Campaign name
  * @param {string} params.landingPage - Landing page URL

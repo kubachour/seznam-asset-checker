@@ -15,7 +15,10 @@ const appState = {
   validationResults: {}, // Compatibility matrix per file
   multiFileGroups: [], // Detected multi-file format groups
   networkStats: {}, // Per-network statistics: { ADFORM: { HIGH: {...}, LOW: {...} }, ... }
-  // Export settings (step 3)
+  // Campaign requirements (optional - step 2)
+  campaignRequirements: [], // Parsed campaign table: [{ name, dimensions: [], maxSizeKB }]
+  tableValidation: {}, // Per-requirement validation results
+  // Export settings (step 4)
   campaignName: '',
   contentName: '',
   landingURL: '',
@@ -221,6 +224,8 @@ function setupEventListeners() {
 
       if (items) {
         // Handle DataTransferItemList - support both files and folders
+        const promises = [];
+
         for (let i = 0; i < items.length; i++) {
           if (items[i].kind === 'file') {
             const entry = items[i].webkitGetAsEntry ? items[i].webkitGetAsEntry() : items[i].getAsEntry();
@@ -228,14 +233,10 @@ function setupEventListeners() {
             if (entry) {
               if (entry.isDirectory) {
                 // Recursively collect files from directory
-                const dirFiles = await readDirectoryRecursive(entry);
-                files.push(...dirFiles);
+                promises.push(readDirectoryRecursive(entry));
               } else if (entry.isFile) {
                 // Get the file
-                const file = await getFileFromEntry(entry);
-                if (file) {
-                  files.push(file);
-                }
+                promises.push(getFileFromEntry(entry).then(file => file ? [file] : []));
               }
             } else {
               // Fallback for browsers without FileSystem API
@@ -246,6 +247,14 @@ function setupEventListeners() {
             }
           }
         }
+
+        // Wait for all directory/file reads to complete
+        const results = await Promise.all(promises);
+        results.forEach(result => {
+          if (Array.isArray(result)) {
+            files.push(...result);
+          }
+        });
       } else {
         // Fallback to files
         for (let i = 0; i < e.dataTransfer.files.length; i++) {
@@ -287,22 +296,28 @@ function setupEventListeners() {
 
 function handleStepClick(stepNumber) {
   // Validate navigation requirements
-  if (stepNumber === 2 && appState.uploadedFiles.length === 0) {
-    alert('Nejprve nahrajte soubory před přechodem na validaci.');
+  if (stepNumber >= 2 && appState.uploadedFiles.length === 0) {
+    alert('Nejprve nahrajte soubory.');
     return;
   }
 
-  if (stepNumber === 3 && Object.keys(appState.validationResults).length === 0) {
+  // Step 2 (table validation) only exists if campaign table provided
+  if (stepNumber === 2 && appState.campaignRequirements.length === 0) {
+    alert('Kampaňová tabulka nebyla poskytnuta. Pokračujte na krok 3.');
+    return;
+  }
+
+  if (stepNumber >= 3 && Object.keys(appState.validationResults).length === 0) {
     alert('Nejprve proveďte validaci bannerů.');
     return;
   }
 
-  if (stepNumber === 4 && !appState.campaignName) {
+  if (stepNumber >= 4 && !appState.campaignName) {
     alert('Nejprve vyplňte nastavení exportu.');
     return;
   }
 
-  if (stepNumber === 5 && appState.selectedNetworks.length === 0) {
+  if (stepNumber >= 5 && appState.selectedNetworks.length === 0) {
     alert('Vyberte alespoň jeden systém před přechodem na export.');
     return;
   }
@@ -338,19 +353,28 @@ function goToStep(stepNumber) {
   });
 
   // Refresh displays when navigating to steps
-  if (stepNumber === 2 && Object.keys(appState.networkStats).length > 0) {
+  if (stepNumber === 2 && appState.campaignRequirements.length > 0) {
+    // Step 2: Table validation (only if campaign table provided)
+    displayTableValidation();
+  }
+
+  if (stepNumber === 3 && Object.keys(appState.networkStats).length > 0) {
+    // Step 3: System validation
     displayNetworkToggles();
   }
 
-  if (stepNumber === 3) {
+  if (stepNumber === 4) {
+    // Step 4: Export settings
     updateExportPreview();
   }
 
-  if (stepNumber === 4 && Object.keys(appState.networkStats).length > 0) {
+  if (stepNumber === 5 && Object.keys(appState.networkStats).length > 0) {
+    // Step 5: Network selection
     displayNetworkSelection();
   }
 
-  if (stepNumber === 5) {
+  if (stepNumber === 6) {
+    // Step 6: Export
     displayExportSettings();
   }
 
@@ -913,7 +937,7 @@ function detectSystemFromPath(folderPath) {
   if (!folderPath) return null;
 
   const pathUpper = folderPath.toUpperCase();
-  const systems = ['ADFORM', 'SOS', 'ONEGAR', 'SKLIK', 'HP_EXCLUSIVE', 'HPEXCLUSIVE', 'HP EXCLUSIVE'];
+  const systems = ['ADFORM', 'SOS', 'ONEGAR', 'SKLIK', 'HP_EXCLUSIVE', 'HPEXCLUSIVE', 'HP EXCLUSIVE', 'GOOGLE_ADS', 'GOOGLE ADS', 'GADS'];
 
   for (const system of systems) {
     if (pathUpper.includes(system)) {
@@ -921,11 +945,144 @@ function detectSystemFromPath(folderPath) {
       if (system.startsWith('HP')) {
         return 'HP_EXCLUSIVE';
       }
+      // Normalize Google Ads variants to GOOGLE_ADS
+      if (system.includes('GOOGLE') || system === 'GADS') {
+        return 'GOOGLE_ADS';
+      }
       return system;
     }
   }
 
   return null;
+}
+
+// =============================================================================
+// CAMPAIGN TABLE PARSER
+// =============================================================================
+
+/**
+ * Parse campaign table from TSV (tab-separated) text
+ * @param {string} text - Raw table text from textarea
+ * @returns {Array<Object>} Parsed requirements [{name, dimensions:[], maxSizeKB}]
+ */
+function parseCampaignTableText(text) {
+  const requirements = [];
+  const lines = text.trim().split('\n');
+
+  let currentRequirement = null;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+
+    // Split by tabs
+    const columns = line.split('\t').map(col => col.trim());
+
+    // Skip header row (contains "Druh", "Rozměry", etc.)
+    if (columns[0] && (columns[0].toLowerCase().includes('druh') || columns[0].toLowerCase().includes('rozměr'))) {
+      continue;
+    }
+
+    const name = columns[0] || '';
+    const dimensionText = columns[1] || '';
+    const sizeText = columns[2] || '';
+
+    // Extract dimensions from text (supports formats like "300x250", "300 x 250", "300×250")
+    const dimensionMatches = dimensionText.match(/(\d+)\s*[x×]\s*(\d+)/gi);
+    const dimensions = dimensionMatches ? dimensionMatches.map(d => {
+      const parts = d.match(/(\d+)\s*[x×]\s*(\d+)/i);
+      return `${parts[1]}x${parts[2]}`;
+    }) : [];
+
+    // Extract size in KB (supports "150 kb", "150KB", "1 MB" => 1024KB)
+    let maxSizeKB = null;
+    if (sizeText) {
+      const sizeMatch = sizeText.match(/([\d.]+)\s*(kb|mb|gb)/i);
+      if (sizeMatch) {
+        const value = parseFloat(sizeMatch[1]);
+        const unit = sizeMatch[2].toLowerCase();
+        if (unit === 'mb') {
+          maxSizeKB = Math.round(value * 1024);
+        } else if (unit === 'gb') {
+          maxSizeKB = Math.round(value * 1024 * 1024);
+        } else {
+          maxSizeKB = Math.round(value);
+        }
+      }
+    }
+
+    // If name exists, start new requirement
+    if (name) {
+      currentRequirement = {
+        name: name,
+        dimensions: dimensions,
+        maxSizeKB: maxSizeKB
+      };
+      requirements.push(currentRequirement);
+    } else if (currentRequirement && dimensions.length > 0) {
+      // No name = continuation of previous requirement
+      currentRequirement.dimensions.push(...dimensions);
+      // Update size if provided
+      if (maxSizeKB && !currentRequirement.maxSizeKB) {
+        currentRequirement.maxSizeKB = maxSizeKB;
+      }
+    }
+  }
+
+  return requirements;
+}
+
+/**
+ * Handle campaign table paste and parse
+ */
+function parseCampaignTable() {
+  const textarea = document.getElementById('campaignTableInput');
+  const resultDiv = document.getElementById('tableParseResult');
+
+  if (!textarea || !resultDiv) return;
+
+  const text = textarea.value.trim();
+
+  if (!text) {
+    resultDiv.innerHTML = '<div style="color: #ef4444; padding: 10px; background: #fee2e2; border-radius: 6px;">⚠️ Vložte prosím tabulku</div>';
+    resultDiv.style.display = 'block';
+    return;
+  }
+
+  try {
+    const requirements = parseCampaignTableText(text);
+
+    if (requirements.length === 0) {
+      resultDiv.innerHTML = '<div style="color: #ef4444; padding: 10px; background: #fee2e2; border-radius: 6px;">⚠️ Nepodařilo se rozpoznat žádné požadavky</div>';
+      resultDiv.style.display = 'block';
+      return;
+    }
+
+    // Store in appState
+    appState.campaignRequirements = requirements;
+
+    // Calculate totals
+    const totalRequirements = requirements.length;
+    const totalDimensions = requirements.reduce((sum, req) => sum + req.dimensions.length, 0);
+
+    // Show success message
+    resultDiv.innerHTML = `
+      <div style="color: #10b981; padding: 10px; background: #d1fae5; border-radius: 6px; border: 1px solid #10b981;">
+        ✅ <strong>Úspěšně zpracováno!</strong><br>
+        <span style="font-size: 14px;">
+          ${totalRequirements} kategorií kreativ, celkem ${totalDimensions} rozměrů
+        </span>
+      </div>
+    `;
+    resultDiv.style.display = 'block';
+
+    console.log('Parsed campaign requirements:', requirements);
+
+  } catch (error) {
+    console.error('Error parsing campaign table:', error);
+    resultDiv.innerHTML = `<div style="color: #ef4444; padding: 10px; background: #fee2e2; border-radius: 6px;">❌ Chyba při zpracování: ${error.message}</div>`;
+    resultDiv.style.display = 'block';
+  }
 }
 
 // =============================================================================
@@ -998,22 +1155,33 @@ async function handleFileUpload(files) {
     if (fileType === 'image') {
       filesToAnalyze.push(file);
     } else if (fileType === 'zip') {
-      zipCount++;
-      if (progressText) {
-        progressText.textContent = `Extracting ZIP file: ${file.name}...`;
-      }
+      // Check if this is an HTML5 banner ZIP
+      const isHTML5 = typeof HTML5Validator !== 'undefined' &&
+        (HTML5Validator.isHTML5BannerByName(file.name) || await HTML5Validator.isHTML5ZIP(file));
 
-      try {
-        const extractedImages = await extractImagesFromZIP(file);
-        filesToAnalyze.push(...extractedImages);
-        console.log(`Extracted ${extractedImages.length} image(s) from ${file.name}`);
-      } catch (error) {
-        console.error(`Failed to extract ${file.name}:`, error);
-        alert(`Error extracting ${file.name}: ${error.message}`);
+      if (isHTML5) {
+        // Keep HTML5 banners as whole files (don't extract)
+        filesToAnalyze.push(file);
+        console.log(`Detected HTML5 banner: ${file.name}`);
+      } else {
+        // Regular ZIP - extract images
+        zipCount++;
+        if (progressText) {
+          progressText.textContent = `Extracting ZIP file: ${file.name}...`;
+        }
+
+        try {
+          const extractedImages = await extractImagesFromZIP(file);
+          filesToAnalyze.push(...extractedImages);
+          console.log(`Extracted ${extractedImages.length} image(s) from ${file.name}`);
+        } catch (error) {
+          console.error(`Failed to extract ${file.name}:`, error);
+          alert(`Error extracting ${file.name}: ${error.message}`);
+        }
       }
     } else {
       skippedCount++;
-      console.warn(`Unsupported file type: ${file.name}. Only JPG, PNG, GIF images and ZIP files are supported.`);
+      console.warn(`Unsupported file type: ${file.name}. Only JPG, PNG, GIF images, HTML5 banners, and ZIP files are supported.`);
     }
   }
 
@@ -1207,23 +1375,198 @@ async function validateCompatibility() {
   // Calculate network stats
   calculateNetworkStats();
 
-  // Display validation results
-  displayNetworkToggles();
+  // Check if campaign table exists
+  if (appState.campaignRequirements.length > 0) {
+    // Show Step 2: Table validation
+    validateAgainstCampaignTable();
+    displayTableValidation();
+    goToStep(2);
+  } else {
+    // Skip to Step 3: System validation
+    displayNetworkToggles();
+    goToStep(3);
+  }
+}
 
-  // Go to step 2 (validation results)
-  goToStep(2);
+/**
+ * Validate uploaded files against campaign requirements
+ */
+function validateAgainstCampaignTable() {
+  const results = [];
+
+  for (const requirement of appState.campaignRequirements) {
+    const result = {
+      requirement: requirement,
+      found: [],
+      missing: [],
+      issues: []
+    };
+
+    // Check each dimension in requirement
+    for (const dimension of requirement.dimensions) {
+      const matchingFiles = appState.uploadedFiles.filter(f => f.dimensions === dimension);
+
+      if (matchingFiles.length > 0) {
+        // Found files with this dimension
+        for (const file of matchingFiles) {
+          const fileResult = {
+            file: file,
+            dimension: dimension,
+            sizeValid: true,
+            sizeIssue: null
+          };
+
+          // Check size if requirement specifies it
+          if (requirement.maxSizeKB && file.sizeKB > requirement.maxSizeKB * 1.05) {
+            fileResult.sizeValid = false;
+            fileResult.sizeIssue = `${file.sizeKB}KB překračuje limit ${requirement.maxSizeKB}KB`;
+          }
+
+          result.found.push(fileResult);
+        }
+      } else {
+        // Missing this dimension
+        result.missing.push(dimension);
+      }
+    }
+
+    results.push(result);
+  }
+
+  // Find extra files (not in requirements)
+  const requiredDimensions = new Set();
+  appState.campaignRequirements.forEach(req => {
+    req.dimensions.forEach(dim => requiredDimensions.add(dim));
+  });
+
+  const extraFiles = appState.uploadedFiles.filter(f =>
+    f.dimensions && !requiredDimensions.has(f.dimensions)
+  );
+
+  appState.tableValidation = {
+    results: results,
+    extraFiles: extraFiles
+  };
+}
+
+/**
+ * Display Step 2: Table validation results
+ */
+function displayTableValidation() {
+  const container = document.getElementById('tableValidationResults');
+  if (!container) return;
+
+  const { results, extraFiles } = appState.tableValidation;
+
+  let html = '<div style="display: grid; gap: 15px;">';
+
+  // Show each requirement
+  for (const result of results) {
+    const req = result.requirement;
+    const totalRequired = req.dimensions.length;
+    const totalFound = new Set(result.found.map(f => f.dimension)).size;
+    const hasMissing = result.missing.length > 0;
+    const hasIssues = result.found.some(f => !f.sizeValid);
+
+    let borderColor = '#10b981'; // green
+    let bgColor = '#f0fdf4';
+
+    if (hasMissing || hasIssues) {
+      borderColor = '#fb923c'; // orange
+      bgColor = '#fff7ed';
+    }
+
+    html += `
+      <div style="border: 2px solid ${borderColor}; border-radius: 12px; padding: 20px; background: ${bgColor};">
+        <h3 style="font-size: 18px; font-weight: 700; margin: 0 0 12px 0; color: #1f2937;">
+          ${req.name}
+          ${req.maxSizeKB ? `<span style="font-size: 14px; color: #6b7280; font-weight: 400;">(max ${req.maxSizeKB}KB)</span>` : ''}
+        </h3>
+
+        <div style="font-size: 16px; margin-bottom: 15px;">
+          <span style="color: #10b981; font-weight: 600;">${totalFound}/${totalRequired}</span>
+          <span style="color: #6b7280;"> rozměrů nalezeno</span>
+        </div>
+
+        <!-- Found files -->
+        ${result.found.length > 0 ? `
+          <div style="margin-bottom: 12px;">
+            <div style="font-weight: 600; color: #059669; margin-bottom: 8px;">✅ Nalezené bannery:</div>
+            <ul style="margin: 0; padding-left: 0; list-style: none;">
+              ${result.found.map(f => {
+                const file = f.file;
+                const thumbnailURL = file.preview || (file.file ? createThumbnailURL(file.file) : '');
+                return `
+                  <li style="margin-bottom: 8px; display: flex; align-items: center; gap: 10px; padding: 8px; background: white; border-radius: 6px; border: 1px solid ${f.sizeValid ? '#bbf7d0' : '#fed7aa'};">
+                    ${thumbnailURL ? `
+                      <img src="${thumbnailURL}" alt="${file.name}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px; border: 1px solid #e5e7eb; flex-shrink: 0;">
+                    ` : ''}
+                    <div style="flex: 1;">
+                      <div><strong>${file.name}</strong></div>
+                      <div style="font-size: 12px; color: #6b7280;">${file.dimensions} • ${file.sizeKB}KB</div>
+                      ${!f.sizeValid ? `<div style="font-size: 12px; color: #ef4444;">⚠️ ${f.sizeIssue}</div>` : ''}
+                    </div>
+                  </li>
+                `;
+              }).join('')}
+            </ul>
+          </div>
+        ` : ''}
+
+        <!-- Missing dimensions -->
+        ${result.missing.length > 0 ? `
+          <div style="padding: 12px; background: #fee2e2; border-radius: 6px; border: 1px solid #ef4444;">
+            <div style="font-weight: 600; color: #dc2626; margin-bottom: 6px;">⚠️ Chybějící rozměry:</div>
+            <div style="color: #991b1b; font-size: 14px;">
+              ${result.missing.join(', ')}
+            </div>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  // Show extra files
+  if (extraFiles.length > 0) {
+    html += `
+      <div style="border: 2px solid #3b82f6; border-radius: 12px; padding: 20px; background: #eff6ff;">
+        <h3 style="font-size: 18px; font-weight: 700; margin: 0 0 12px 0; color: #1f2937;">
+          ℹ️ Navíc (není v tabulce)
+        </h3>
+        <ul style="margin: 0; padding-left: 0; list-style: none;">
+          ${extraFiles.map(file => {
+            const thumbnailURL = file.preview || (file.file ? createThumbnailURL(file.file) : '');
+            return `
+              <li style="margin-bottom: 8px; display: flex; align-items: center; gap: 10px; padding: 8px; background: white; border-radius: 6px; border: 1px solid #bfdbfe;">
+                ${thumbnailURL ? `
+                  <img src="${thumbnailURL}" alt="${file.name}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px; border: 1px solid #e5e7eb; flex-shrink: 0;">
+                ` : ''}
+                <div style="flex: 1;">
+                  <div><strong>${file.name}</strong></div>
+                  <div style="font-size: 12px; color: #6b7280;">${file.dimensions} • ${file.sizeKB}KB</div>
+                </div>
+              </li>
+            `;
+          }).join('')}
+        </ul>
+      </div>
+    `;
+  }
+
+  html += '</div>';
+  container.innerHTML = html;
 }
 
 function calculateNetworkStats() {
   // Initialize stats for all networks
-  const networks = ['ADFORM', 'SOS', 'ONEGAR', 'SKLIK', 'HP_EXCLUSIVE'];
+  const networks = ['ADFORM', 'SOS', 'ONEGAR', 'SKLIK', 'HP_EXCLUSIVE', 'GOOGLE_ADS'];
   const tiers = ['HIGH', 'LOW'];
 
   for (const network of networks) {
     appState.networkStats[network] = {};
 
-    if (network === 'HP_EXCLUSIVE') {
-      // HP_EXCLUSIVE has no tiers
+    if (network === 'HP_EXCLUSIVE' || network === 'GOOGLE_ADS') {
+      // HP_EXCLUSIVE and GOOGLE_ADS have no tiers
       appState.networkStats[network].NONE = {
         eligibleAssets: 0,
         totalAssets: appState.uploadedFiles.length,
@@ -1689,9 +2032,21 @@ function buildValidDetails(network) {
   if (assignedFiles.length > 0) {
     html += '<div style="margin-bottom: 12px;">';
     html += '<div style="font-weight: 600; color: #059669; margin-bottom: 8px; font-size: 14px;">📂 Přiřazené bannery:</div>';
-    html += '<ul style="margin: 0; padding-left: 20px; color: #166534;">';
+    html += '<ul style="margin: 0; padding-left: 0; list-style: none; color: #166534;">';
     for (const fileInfo of assignedFiles) {
-      html += `<li style="margin-bottom: 6px;"><strong>${fileInfo.fileName}</strong><br/><span style="color: #166534; font-size: 12px;">${fileInfo.file.dimensions} • ${fileInfo.file.sizeKB} KB</span></li>`;
+      const thumbnailURL = fileInfo.file.preview || (fileInfo.file.file ? createThumbnailURL(fileInfo.file.file) : '');
+      html += `
+        <li style="margin-bottom: 8px; display: flex; align-items: center; gap: 10px; padding: 8px; background: #f0fdf4; border-radius: 6px; border: 1px solid #bbf7d0;">
+          ${thumbnailURL ? `
+            <img src="${thumbnailURL}" alt="${fileInfo.fileName}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid #e5e7eb; flex-shrink: 0;">
+          ` : `
+            <div style="width: 60px; height: 60px; background: #f3f4f6; border-radius: 4px; border: 1px solid #e5e7eb; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 24px;">📄</div>
+          `}
+          <div style="flex: 1;">
+            <div><strong>${fileInfo.fileName}</strong></div>
+            <div style="color: #166534; font-size: 12px;">${fileInfo.file.dimensions} • ${fileInfo.file.sizeKB} KB</div>
+          </div>
+        </li>`;
     }
     html += '</ul>';
     html += '</div>';
@@ -1701,9 +2056,21 @@ function buildValidDetails(network) {
   if (otherValidFiles.length > 0) {
     html += '<div style="margin-bottom: 12px;">';
     html += '<div style="font-weight: 600; color: #059669; margin-bottom: 8px; font-size: 14px;">✓ Další kompatibilní bannery:</div>';
-    html += '<ul style="margin: 0; padding-left: 20px; color: #166534;">';
+    html += '<ul style="margin: 0; padding-left: 0; list-style: none; color: #166534;">';
     for (const fileInfo of otherValidFiles) {
-      html += `<li style="margin-bottom: 6px;"><strong>${fileInfo.fileName}</strong><br/><span style="color: #166534; font-size: 12px;">${fileInfo.file.dimensions} • ${fileInfo.file.sizeKB} KB</span></li>`;
+      const thumbnailURL = fileInfo.file.preview || (fileInfo.file.file ? createThumbnailURL(fileInfo.file.file) : '');
+      html += `
+        <li style="margin-bottom: 8px; display: flex; align-items: center; gap: 10px; padding: 8px; background: #f0fdf4; border-radius: 6px; border: 1px solid #bbf7d0;">
+          ${thumbnailURL ? `
+            <img src="${thumbnailURL}" alt="${fileInfo.fileName}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid #e5e7eb; flex-shrink: 0;">
+          ` : `
+            <div style="width: 60px; height: 60px; background: #f3f4f6; border-radius: 4px; border: 1px solid #e5e7eb; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 24px;">📄</div>
+          `}
+          <div style="flex: 1;">
+            <div><strong>${fileInfo.fileName}</strong></div>
+            <div style="color: #166534; font-size: 12px;">${fileInfo.file.dimensions} • ${fileInfo.file.sizeKB} KB</div>
+          </div>
+        </li>`;
     }
     html += '</ul>';
     html += '</div>';
