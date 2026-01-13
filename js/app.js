@@ -5,7 +5,7 @@
 // GLOBAL STATE
 // =============================================================================
 
-const APP_VERSION = 'v1.0.5'; // Increment sub-version with each commit
+const APP_VERSION = 'v1.0.7'; // Increment sub-version with each commit
 
 const appState = {
   currentStep: 1,
@@ -971,6 +971,9 @@ function parseCampaignTableText(text) {
 
   let currentRequirement = null;
 
+  console.group('📋 Parsing Campaign Table');
+  console.log(`Total lines to parse: ${lines.length}`);
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
@@ -983,9 +986,22 @@ function parseCampaignTableText(text) {
       continue;
     }
 
-    const name = columns[0] || '';
-    const dimensionText = columns[1] || '';
-    const sizeText = columns[2] || '';
+    let name = columns[0] || '';
+    let dimensionText = columns[1] || '';
+    let sizeText = columns[2] || '';
+
+    // MERGED CELL HANDLING: Check if column[0] contains ONLY dimensions (no real name)
+    // This happens when Excel paste doesn't preserve empty cells from merged rows
+    const isDimensionOnly = /^\d+\s*[x×]\s*\d+$/i.test(name);
+
+    if (isDimensionOnly) {
+      // Column 0 contains a dimension, not a name - this is a continuation row
+      // Shift columns: dimension is in col[0], size might be in col[1]
+      console.log(`  Line ${i + 1}: Detected dimension-only row "${name}" - treating as continuation`);
+      dimensionText = name;
+      sizeText = columns[1] || '';
+      name = ''; // Clear name to trigger continuation logic
+    }
 
     // Extract dimensions from text (supports formats like "300x250", "300 x 250", "300×250")
     const dimensionMatches = dimensionText.match(/(\d+)\s*[x×]\s*(\d+)/gi);
@@ -1011,23 +1027,32 @@ function parseCampaignTableText(text) {
       }
     }
 
-    // If name exists, start new requirement
-    if (name) {
+    // If name exists and is not just a dimension, start new requirement
+    if (name && !isDimensionOnly) {
       currentRequirement = {
         name: name,
         dimensions: dimensions,
         maxSizeKB: maxSizeKB
       };
       requirements.push(currentRequirement);
+      console.log(`  Line ${i + 1}: New requirement "${name}" with ${dimensions.length} dimension(s), size: ${maxSizeKB || 'N/A'} KB`);
     } else if (currentRequirement && dimensions.length > 0) {
-      // No name = continuation of previous requirement
+      // No name or dimension-only = continuation of previous requirement
       currentRequirement.dimensions.push(...dimensions);
-      // Update size if provided
+      console.log(`  Line ${i + 1}: Added ${dimensions.length} dimension(s) to "${currentRequirement.name}"`);
+      // Update size if provided and not already set
       if (maxSizeKB && !currentRequirement.maxSizeKB) {
         currentRequirement.maxSizeKB = maxSizeKB;
+        console.log(`  Line ${i + 1}: Updated size for "${currentRequirement.name}" to ${maxSizeKB} KB`);
       }
     }
   }
+
+  console.log(`\n✅ Parsed ${requirements.length} requirements:`);
+  requirements.forEach((req, idx) => {
+    console.log(`  ${idx + 1}. "${req.name}": ${req.dimensions.length} dimensions [${req.dimensions.join(', ')}], ${req.maxSizeKB || 'N/A'} KB`);
+  });
+  console.groupEnd();
 
   return requirements;
 }
@@ -1393,7 +1418,7 @@ async function validateCompatibility() {
               tier: tier,
               format: match.specKey,
               formatDisplay: match.formatDisplay,
-              reason: validation.issues.join(', ') || `Size exceeds limit (${match.fileSize}KB > ${match.sizeLimit}KB)`
+              reason: validation.issues.join(', ') || `Velikost překračuje limit (${match.fileSize}KB > ${match.sizeLimit}KB)`
             });
           }
         }
@@ -1419,7 +1444,31 @@ async function validateCompatibility() {
           tier: null,
           format: match.specKey,
           formatDisplay: match.formatDisplay,
-          reason: validation.issues.join(', ') || `Size exceeds limit`
+          reason: validation.issues.join(', ') || `Velikost překračuje limit`
+        });
+      }
+    }
+
+    // Check GOOGLE_ADS (no tier)
+    const googleAdsMatches = findMatchingFormats(fileData, 'GOOGLE_ADS', null);
+    for (const match of googleAdsMatches) {
+      const validation = validateFileForFormat(fileData, match.spec);
+
+      if (validation.valid && match.sizeValid) {
+        compatible.push({
+          network: 'GOOGLE_ADS',
+          tier: null,
+          format: match.specKey,
+          formatDisplay: match.formatDisplay,
+          spec: match.spec
+        });
+      } else {
+        incompatible.push({
+          network: 'GOOGLE_ADS',
+          tier: null,
+          format: match.specKey,
+          formatDisplay: match.formatDisplay,
+          reason: validation.issues.join(', ') || `Velikost překračuje limit`
         });
       }
     }
@@ -1430,6 +1479,22 @@ async function validateCompatibility() {
       incompatible: incompatible
     };
   }
+
+  // Log validation summary to console
+  console.group('📊 Validation Summary');
+  console.log(`Total files validated: ${appState.uploadedFiles.length}`);
+  let totalCompatible = 0;
+  let totalIncompatible = 0;
+  for (const [fileName, validation] of Object.entries(appState.validationResults)) {
+    totalCompatible += validation.compatible.length;
+    totalIncompatible += validation.incompatible.length;
+    if (validation.incompatible.length > 0) {
+      console.warn(`⚠️  ${fileName}: ${validation.compatible.length} compatible, ${validation.incompatible.length} incompatible placements`);
+    }
+  }
+  console.log(`✅ Total compatible placements: ${totalCompatible}`);
+  console.log(`❌ Total incompatible placements: ${totalIncompatible}`);
+  console.groupEnd();
 
   // Calculate network stats
   calculateNetworkStats();
@@ -1679,7 +1744,9 @@ function calculateNetworkStats() {
         appState.networkStats[network][tier].errors++;
         appState.networkStats[network][tier].errorFiles.push({
           file: fileName,
-          reason: incomp.reason
+          reason: incomp.reason,
+          tier: tier !== 'NONE' ? tier : null,
+          format: incomp.format
         });
       }
     }
@@ -2159,16 +2226,49 @@ function buildValidDetails(network) {
 function buildErrorDetails(stats) {
   if (!stats || !stats.errorFiles.length) return '';
 
-  const uniqueErrors = {};
+  // Group errors by filename, collecting all tier-specific reasons
+  const errorsByFile = {};
   for (const errorInfo of stats.errorFiles) {
-    if (!uniqueErrors[errorInfo.file]) {
-      uniqueErrors[errorInfo.file] = errorInfo.reason;
+    if (!errorsByFile[errorInfo.file]) {
+      errorsByFile[errorInfo.file] = [];
     }
+    // Add tier information if present
+    const tierInfo = errorInfo.tier ? ` (${errorInfo.tier})` : '';
+    errorsByFile[errorInfo.file].push({
+      reason: errorInfo.reason,
+      tier: errorInfo.tier,
+      format: errorInfo.format
+    });
   }
 
+  // Log errors to console for developers
+  console.group('🔴 Validation Errors');
+  for (const [file, errors] of Object.entries(errorsByFile)) {
+    console.group(`📄 ${file}`);
+    errors.forEach((err, idx) => {
+      const tierLabel = err.tier ? ` [${err.tier} tier]` : '';
+      const formatLabel = err.format ? ` (${err.format})` : '';
+      console.error(`  Error ${idx + 1}${tierLabel}${formatLabel}: ${err.reason}`);
+    });
+    console.groupEnd();
+  }
+  console.groupEnd();
+
   let html = '<ul style="margin: 0; padding-left: 20px; color: #7f1d1d;">';
-  for (const [file, reason] of Object.entries(uniqueErrors)) {
-    html += `<li style="margin-bottom: 6px;"><strong>${file}</strong><br/><span style="color: #991b1b; font-size: 12px;">${reason}</span></li>`;
+  for (const [file, errors] of Object.entries(errorsByFile)) {
+    html += `<li style="margin-bottom: 8px;"><strong>${file}</strong><br/>`;
+
+    // Show all error reasons (deduplicate identical messages)
+    const uniqueReasons = [...new Set(errors.map(e => e.reason))];
+    uniqueReasons.forEach((reason, idx) => {
+      // Find which tiers have this error
+      const tiersWithError = errors.filter(e => e.reason === reason).map(e => e.tier).filter(Boolean);
+      const tierLabel = tiersWithError.length > 0 ? ` <span style="font-size: 11px; color: #6b7280;">[${tiersWithError.join(', ')}]</span>` : '';
+
+      html += `<span style="color: #991b1b; font-size: 12px; display: block; margin-top: ${idx > 0 ? '4px' : '2px'};">• ${reason}${tierLabel}</span>`;
+    });
+
+    html += '</li>';
   }
   html += '</ul>';
 

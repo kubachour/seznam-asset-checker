@@ -646,7 +646,7 @@ function validateFileForFormat(fileData, formatSpec) {
   if (fileData.isHTML5 && fileData.html5Validation) {
     // Check dimensions
     if (!formatSpec.dimensions.includes(fileData.dimensions)) {
-      issues.push(`Dimension ${fileData.dimensions} not supported (expected: ${formatSpec.dimensions.join(' or ')})`);
+      issues.push(`Rozměr ${fileData.dimensions} není podporován (očekáváno: ${formatSpec.dimensions.join(' nebo ')})`);
     }
 
     // Check size limit (with 5% tolerance)
@@ -655,7 +655,7 @@ function validateFileForFormat(fileData, formatSpec) {
     const toleranceMultiplier = 1.05; // 5% tolerance for file size
 
     if (fileSize > sizeLimit * toleranceMultiplier) {
-      issues.push(`File size ${fileSize}KB exceeds ${sizeLimit}KB limit (${Math.round(sizeLimit * toleranceMultiplier)}KB with 5% tolerance)`);
+      issues.push(`Velikost souboru ${fileSize}KB překračuje limit ${sizeLimit}KB (${Math.round(sizeLimit * toleranceMultiplier)}KB s 5% tolerancí)`);
     }
 
     // Add HTML5 validation issues
@@ -672,13 +672,13 @@ function validateFileForFormat(fileData, formatSpec) {
   // Standard validation for image files
   // Check dimensions
   if (!formatSpec.dimensions.includes(fileData.dimensions)) {
-    issues.push(`Dimension ${fileData.dimensions} not supported (expected: ${formatSpec.dimensions.join(' or ')})`);
+    issues.push(`Rozměr ${fileData.dimensions} není podporován (očekáváno: ${formatSpec.dimensions.join(' nebo ')})`);
   }
 
   // Check file format
   const fileFormat = fileData.format;
   if (!formatSpec.formats.includes(fileFormat)) {
-    issues.push(`Format ${fileFormat} not allowed (allowed: ${formatSpec.formats.join(', ')})`);
+    issues.push(`Formát ${fileFormat} není povolen (povoleno: ${formatSpec.formats.join(', ')})`);
   }
 
   // Check size limit (with 5% tolerance)
@@ -687,12 +687,12 @@ function validateFileForFormat(fileData, formatSpec) {
   const toleranceMultiplier = 1.05; // 5% tolerance for file size
 
   if (fileSize > sizeLimit * toleranceMultiplier) {
-    issues.push(`File size ${fileSize}KB exceeds ${sizeLimit}KB limit (${Math.round(sizeLimit * toleranceMultiplier)}KB with 5% tolerance)`);
+    issues.push(`Velikost souboru ${fileSize}KB překračuje limit ${sizeLimit}KB (${Math.round(sizeLimit * toleranceMultiplier)}KB s 5% tolerancí)`);
   }
 
   // Check color space
   if (!fileData.colorSpaceValid && fileData.colorSpace === 'CMYK') {
-    issues.push('CMYK color space detected (RGB required)');
+    issues.push('Detekován barevný prostor CMYK (vyžadováno RGB)');
   }
 
   return {
