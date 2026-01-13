@@ -5,7 +5,7 @@
 // GLOBAL STATE
 // =============================================================================
 
-const APP_VERSION = 'v1.0.4'; // Increment sub-version with each commit
+const APP_VERSION = 'v1.0.5'; // Increment sub-version with each commit
 
 const appState = {
   currentStep: 1,
@@ -1038,6 +1038,8 @@ function parseCampaignTableText(text) {
 function parseCampaignTable() {
   const textarea = document.getElementById('campaignTableInput');
   const resultDiv = document.getElementById('tableParseResult');
+  const inputContainer = document.getElementById('tableInputContainer');
+  const parsedTableDisplay = document.getElementById('parsedTableDisplay');
 
   if (!textarea || !resultDiv) return;
 
@@ -1065,16 +1067,57 @@ function parseCampaignTable() {
     const totalRequirements = requirements.length;
     const totalDimensions = requirements.reduce((sum, req) => sum + req.dimensions.length, 0);
 
-    // Show success message
-    resultDiv.innerHTML = `
-      <div style="color: #10b981; padding: 10px; background: #d1fae5; border-radius: 6px; border: 1px solid #10b981;">
-        ✅ <strong>Úspěšně zpracováno!</strong><br>
+    // Generate formatted table HTML
+    let tableHTML = `
+      <div style="color: #10b981; padding: 10px; background: #d1fae5; border-radius: 6px; border: 1px solid #10b981; margin-bottom: 15px;">
+        ✅ <strong>Úspěšně zpracováno!</strong>
         <span style="font-size: 14px;">
           ${totalRequirements} kategorií kreativ, celkem ${totalDimensions} rozměrů
         </span>
       </div>
+
+      <button class="btn-secondary" onclick="toggleTableInput()" style="margin-bottom: 15px;">
+        📝 Upravit vstupní data
+      </button>
+
+      <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; background: white; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+          <thead>
+            <tr style="background: #f9fafb;">
+              <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e5e7eb; font-weight: 600; color: #374151;">Název kreativy</th>
+              <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e5e7eb; font-weight: 600; color: #374151;">Rozměry</th>
+              <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e5e7eb; font-weight: 600; color: #374151;">Max. velikost</th>
+            </tr>
+          </thead>
+          <tbody>
     `;
-    resultDiv.style.display = 'block';
+
+    // Add table rows
+    requirements.forEach((req, index) => {
+      const bgColor = index % 2 === 0 ? '#ffffff' : '#f9fafb';
+      const dimensions = req.dimensions.join(', ');
+      const maxSize = req.maxSizeKB ? `${req.maxSizeKB} KB` : '-';
+
+      tableHTML += `
+        <tr style="background: ${bgColor};">
+          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${req.name}</td>
+          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-family: 'Courier New', monospace; font-size: 13px;">${dimensions}</td>
+          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${maxSize}</td>
+        </tr>
+      `;
+    });
+
+    tableHTML += `
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    // Show parsed table, hide input
+    parsedTableDisplay.innerHTML = tableHTML;
+    parsedTableDisplay.style.display = 'block';
+    inputContainer.style.display = 'none';
+    resultDiv.style.display = 'none';
 
     console.log('Parsed campaign requirements:', requirements);
 
@@ -1082,6 +1125,22 @@ function parseCampaignTable() {
     console.error('Error parsing campaign table:', error);
     resultDiv.innerHTML = `<div style="color: #ef4444; padding: 10px; background: #fee2e2; border-radius: 6px;">❌ Chyba při zpracování: ${error.message}</div>`;
     resultDiv.style.display = 'block';
+  }
+}
+
+/**
+ * Toggle visibility of table input container
+ */
+function toggleTableInput() {
+  const inputContainer = document.getElementById('tableInputContainer');
+  const parsedTableDisplay = document.getElementById('parsedTableDisplay');
+
+  if (inputContainer.style.display === 'none') {
+    inputContainer.style.display = 'block';
+    parsedTableDisplay.style.display = 'none';
+  } else {
+    inputContainer.style.display = 'none';
+    parsedTableDisplay.style.display = 'block';
   }
 }
 

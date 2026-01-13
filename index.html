@@ -108,15 +108,21 @@
           </div>
         </details>
 
-        <textarea
-          id="campaignTableInput"
-          placeholder="Zkopíruj tabulku z Excelu a vlož sem..."
-          style="width: 100%; min-height: 150px; padding: 12px; font-family: 'Courier New', monospace; font-size: 13px; border: 1px solid #d1d5db; border-radius: 6px; resize: vertical;"
-        ></textarea>
+        <div id="tableInputContainer">
+          <textarea
+            id="campaignTableInput"
+            placeholder="Zkopíruj tabulku z Excelu a vlož sem..."
+            style="width: 100%; min-height: 150px; padding: 12px; font-family: 'Courier New', monospace; font-size: 13px; border: 1px solid #d1d5db; border-radius: 6px; resize: vertical;"
+          ></textarea>
 
-        <button class="btn-secondary" onclick="parseCampaignTable()" style="margin-top: 10px;">
-          📋 Zpracovat tabulku
-        </button>
+          <button class="btn-secondary" onclick="parseCampaignTable()" style="margin-top: 10px;">
+            📋 Zpracovat tabulku
+          </button>
+        </div>
+
+        <div id="parsedTableDisplay" style="display: none; margin-top: 15px;">
+          <!-- Parsed table will be inserted here -->
+        </div>
 
         <div id="tableParseResult" style="margin-top: 10px; display: none;"></div>
       </div>
