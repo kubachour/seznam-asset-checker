@@ -5,7 +5,7 @@
 // GLOBAL STATE
 // =============================================================================
 
-const APP_VERSION = 'v1.0.7'; // Increment sub-version with each commit
+const APP_VERSION = 'v1.2.1'; // Increment sub-version with each commit
 
 const appState = {
   currentStep: 1,
@@ -18,9 +18,13 @@ const appState = {
   // Campaign requirements (optional - step 2)
   campaignRequirements: [], // Parsed campaign table: [{ name, dimensions: [], maxSizeKB }]
   tableValidation: {}, // Per-requirement validation results
+  campaignTableData: {}, // Per-dimension utm_campaign and targetUrl: { '300x250': { utm_campaign, targetUrl } }
+  fieldsLockedByTable: false, // Whether campaign/URL fields are locked by table data
   // Export settings (step 4)
   campaignName: '',
+  contentVariants: [],
   contentName: '',
+  placement: '',
   landingURL: '',
   isZboziCampaign: false
 };
@@ -328,6 +332,161 @@ function handleStepClick(stepNumber) {
   }
 }
 
+/**
+ * Apply campaign table data to Step 4 fields (pre-fill and lock if needed)
+ */
+function applyCampaignTableData() {
+  const campaignTableData = appState.campaignTableData || {};
+  const dataEntries = Object.keys(campaignTableData);
+
+  // If no campaign table data, do nothing
+  if (dataEntries.length === 0) {
+    return;
+  }
+
+  // Get dimensions of all uploaded files
+  const uploadedDimensions = new Set();
+  appState.uploadedFiles.forEach(file => {
+    if (file.dimensions) {
+      uploadedDimensions.add(file.dimensions);
+    }
+  });
+
+  // Check how many uploaded dimensions have campaign table data
+  const dimensionsWithData = [];
+  const dimensionsWithoutData = [];
+  uploadedDimensions.forEach(dim => {
+    if (campaignTableData[dim]) {
+      dimensionsWithData.push(dim);
+    } else {
+      dimensionsWithoutData.push(dim);
+    }
+  });
+
+  const allDimensionsCovered = dimensionsWithData.length === uploadedDimensions.size && dimensionsWithData.length > 0;
+  const someDimensionsCovered = dimensionsWithData.length > 0 && dimensionsWithData.length < uploadedDimensions.size;
+
+  // Get common campaign name and URL (if all dimensions have the same value)
+  let commonCampaign = null;
+  let commonUrl = null;
+
+  if (dimensionsWithData.length > 0) {
+    const campaigns = new Set();
+    const urls = new Set();
+
+    dimensionsWithData.forEach(dim => {
+      const data = campaignTableData[dim];
+      if (data.utm_campaign) campaigns.add(data.utm_campaign);
+      if (data.targetUrl) urls.add(data.targetUrl);
+    });
+
+    if (campaigns.size === 1) commonCampaign = Array.from(campaigns)[0];
+    if (urls.size === 1) commonUrl = Array.from(urls)[0];
+  }
+
+  // Pre-fill fields if common values exist
+  const campaignNameInput = document.getElementById('campaignName');
+  const landingURLInput = document.getElementById('landingURL');
+  const tableDataInfo = document.getElementById('tableDataInfo');
+
+  if (allDimensionsCovered && commonCampaign && commonUrl) {
+    // All dimensions covered and values are consistent - lock fields
+    if (campaignNameInput) {
+      campaignNameInput.value = commonCampaign;
+      campaignNameInput.disabled = true;
+      campaignNameInput.style.backgroundColor = '#f3f4f6';
+      campaignNameInput.style.color = '#6b7280';
+    }
+
+    if (landingURLInput) {
+      landingURLInput.value = commonUrl;
+      landingURLInput.disabled = true;
+      landingURLInput.style.backgroundColor = '#f3f4f6';
+      landingURLInput.style.color = '#6b7280';
+    }
+
+    // Show info message with unlock button
+    if (tableDataInfo) {
+      tableDataInfo.innerHTML = `
+        <div style="background: #dbeafe; border: 1px solid #3b82f6; border-radius: 6px; padding: 12px; margin-bottom: 15px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+            <div style="flex: 1;">
+              <strong style="color: #1e40af;">📊 Načteno z kampaňové tabulky</strong>
+              <div style="font-size: 13px; color: #1e40af; margin-top: 4px;">
+                Název kampaně a cílová URL načteny pro všechny rozměry banneru.
+              </div>
+            </div>
+            <button type="button" onclick="unlockTableDataFields()" style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; white-space: nowrap;">
+              ✏️ Upravit
+            </button>
+          </div>
+        </div>
+      `;
+      tableDataInfo.style.display = 'block';
+    }
+
+    appState.fieldsLockedByTable = true;
+  } else if (someDimensionsCovered) {
+    // Some dimensions covered - show info, don't lock
+    if (tableDataInfo) {
+      tableDataInfo.innerHTML = `
+        <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px; padding: 12px; margin-bottom: 15px;">
+          <strong style="color: #92400e;">📊 Částečná data z tabulky</strong>
+          <div style="font-size: 13px; color: #92400e; margin-top: 4px;">
+            Kampaň a URL načteny z tabulky pro rozměry: <strong>${dimensionsWithData.join(', ')}</strong>
+            <br>Ručně zadejte údaje pro ostatní rozměry.
+          </div>
+        </div>
+      `;
+      tableDataInfo.style.display = 'block';
+    }
+
+    // Pre-fill if common values exist but don't lock
+    if (commonCampaign && campaignNameInput && !campaignNameInput.value) {
+      campaignNameInput.value = commonCampaign;
+    }
+    if (commonUrl && landingURLInput && !landingURLInput.value) {
+      landingURLInput.value = commonUrl;
+    }
+
+    appState.fieldsLockedByTable = false;
+  }
+}
+
+/**
+ * Unlock fields that were locked by campaign table data
+ */
+function unlockTableDataFields() {
+  const campaignNameInput = document.getElementById('campaignName');
+  const landingURLInput = document.getElementById('landingURL');
+  const tableDataInfo = document.getElementById('tableDataInfo');
+
+  if (campaignNameInput) {
+    campaignNameInput.disabled = false;
+    campaignNameInput.style.backgroundColor = '';
+    campaignNameInput.style.color = '';
+  }
+
+  if (landingURLInput) {
+    landingURLInput.disabled = false;
+    landingURLInput.style.backgroundColor = '';
+    landingURLInput.style.color = '';
+  }
+
+  if (tableDataInfo) {
+    tableDataInfo.innerHTML = `
+      <div style="background: #d1fae5; border: 1px solid #10b981; border-radius: 6px; padding: 12px; margin-bottom: 15px;">
+        <strong style="color: #065f46;">✏️ Pole odemčena</strong>
+        <div style="font-size: 13px; color: #065f46; margin-top: 4px;">
+          Můžete nyní upravit hodnoty ručně. Změny se použijí pro všechny bannery.
+        </div>
+      </div>
+    `;
+  }
+
+  appState.fieldsLockedByTable = false;
+}
+
 function goToStep(stepNumber) {
   // Hide all sections
   const sections = document.querySelectorAll('.section');
@@ -365,6 +524,7 @@ function goToStep(stepNumber) {
 
   if (stepNumber === 4) {
     // Step 4: Export settings
+    applyCampaignTableData();
     updateExportPreview();
   }
 
@@ -397,16 +557,90 @@ function updateCampaignTier(tier) {
 /**
  * Update export preview with sample URL
  */
+/**
+ * Add a new content variant row
+ */
+function addContentVariant() {
+  const container = document.getElementById('contentVariantsList');
+  if (!container) return;
+
+  const newRow = document.createElement('div');
+  newRow.className = 'content-variant-row';
+  newRow.style.cssText = 'display: flex; gap: 10px; margin-bottom: 8px; align-items: center;';
+  newRow.innerHTML = `
+    <input type="text" class="content-variant-input" placeholder="např. varianta-a" oninput="updateExportPreview()" style="flex: 1;" />
+    <button type="button" class="btn-remove-variant" onclick="removeContentVariant(this)" style="background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 14px;">✕</button>
+  `;
+  container.appendChild(newRow);
+  updateContentVariantButtons();
+  updateExportPreview();
+}
+
+/**
+ * Remove a content variant row
+ */
+function removeContentVariant(button) {
+  const row = button.closest('.content-variant-row');
+  if (row) {
+    row.remove();
+    updateContentVariantButtons();
+    updateExportPreview();
+  }
+}
+
+/**
+ * Update visibility of remove buttons (hide if only one variant)
+ */
+function updateContentVariantButtons() {
+  const rows = document.querySelectorAll('.content-variant-row');
+  rows.forEach((row, index) => {
+    const removeBtn = row.querySelector('.btn-remove-variant');
+    if (removeBtn) {
+      removeBtn.style.display = rows.length > 1 ? 'block' : 'none';
+    }
+  });
+}
+
+/**
+ * Get all content variants from the form
+ */
+function getContentVariants() {
+  const inputs = document.querySelectorAll('.content-variant-input');
+  return Array.from(inputs)
+    .map(input => input.value.trim())
+    .filter(value => value.length > 0);
+}
+
+/**
+ * Get the current placement value (from dropdown or custom input)
+ */
+function getPlacementValue() {
+  const placementSelect = document.getElementById('placement');
+  const placementCustom = document.getElementById('placementCustom');
+
+  if (!placementSelect) return '';
+
+  if (placementSelect.value === 'custom' && placementCustom) {
+    return placementCustom.value.trim();
+  }
+
+  return placementSelect.value;
+}
+
 function updateExportPreview() {
   // Read values from inputs
   const campaignName = document.getElementById('campaignName')?.value || '';
-  const contentName = document.getElementById('contentName')?.value || '';
+  const contentVariants = getContentVariants();
+  const contentName = contentVariants.length > 0 ? contentVariants[0] : ''; // Use first variant for preview
   const landingURL = document.getElementById('landingURL')?.value || '';
+  const placement = getPlacementValue();
   const zboziToggle = document.getElementById('zboziToggle')?.checked || false;
 
   // Update state
   appState.campaignName = campaignName;
-  appState.contentName = contentName;
+  appState.contentVariants = contentVariants;
+  appState.contentName = contentName; // Keeping for backwards compatibility
+  appState.placement = placement;
   appState.landingURL = landingURL;
   appState.isZboziCampaign = zboziToggle;
 
@@ -967,9 +1201,12 @@ function detectSystemFromPath(folderPath) {
  */
 function parseCampaignTableText(text) {
   const requirements = [];
+  const campaignTableData = {}; // Per-dimension mapping
   const lines = text.trim().split('\n');
 
   let currentRequirement = null;
+  let currentUtmCampaign = null;
+  let currentTargetUrl = null;
 
   console.group('📋 Parsing Campaign Table');
   console.log(`Total lines to parse: ${lines.length}`);
@@ -989,6 +1226,8 @@ function parseCampaignTableText(text) {
     let name = columns[0] || '';
     let dimensionText = columns[1] || '';
     let sizeText = columns[2] || '';
+    let utmCampaign = columns[3] || ''; // Optional: utm_campaign
+    let targetUrl = columns[4] || ''; // Optional: target URL
 
     // MERGED CELL HANDLING: Check if column[0] contains ONLY dimensions (no real name)
     // This happens when Excel paste doesn't preserve empty cells from merged rows
@@ -1035,10 +1274,36 @@ function parseCampaignTableText(text) {
         maxSizeKB: maxSizeKB
       };
       requirements.push(currentRequirement);
-      console.log(`  Line ${i + 1}: New requirement "${name}" with ${dimensions.length} dimension(s), size: ${maxSizeKB || 'N/A'} KB`);
+
+      // Store utm_campaign and targetUrl if provided
+      if (utmCampaign) currentUtmCampaign = utmCampaign;
+      if (targetUrl) currentTargetUrl = targetUrl;
+
+      // Map dimensions to campaign data
+      dimensions.forEach(dim => {
+        if (currentUtmCampaign || currentTargetUrl) {
+          campaignTableData[dim] = {
+            utm_campaign: currentUtmCampaign || '',
+            targetUrl: currentTargetUrl || ''
+          };
+        }
+      });
+
+      console.log(`  Line ${i + 1}: New requirement "${name}" with ${dimensions.length} dimension(s), size: ${maxSizeKB || 'N/A'} KB, campaign: ${currentUtmCampaign || 'N/A'}`);
     } else if (currentRequirement && dimensions.length > 0) {
       // No name or dimension-only = continuation of previous requirement
       currentRequirement.dimensions.push(...dimensions);
+
+      // Map dimensions to campaign data (use current campaign/URL from parent row)
+      dimensions.forEach(dim => {
+        if (currentUtmCampaign || currentTargetUrl) {
+          campaignTableData[dim] = {
+            utm_campaign: currentUtmCampaign || '',
+            targetUrl: currentTargetUrl || ''
+          };
+        }
+      });
+
       console.log(`  Line ${i + 1}: Added ${dimensions.length} dimension(s) to "${currentRequirement.name}"`);
       // Update size if provided and not already set
       if (maxSizeKB && !currentRequirement.maxSizeKB) {
@@ -1052,9 +1317,18 @@ function parseCampaignTableText(text) {
   requirements.forEach((req, idx) => {
     console.log(`  ${idx + 1}. "${req.name}": ${req.dimensions.length} dimensions [${req.dimensions.join(', ')}], ${req.maxSizeKB || 'N/A'} KB`);
   });
+
+  const dimensionsWithCampaignData = Object.keys(campaignTableData).length;
+  if (dimensionsWithCampaignData > 0) {
+    console.log(`\n📊 Campaign table data extracted for ${dimensionsWithCampaignData} dimension(s)`);
+    Object.entries(campaignTableData).forEach(([dim, data]) => {
+      console.log(`  ${dim}: campaign="${data.utm_campaign}", url="${data.targetUrl}"`);
+    });
+  }
+
   console.groupEnd();
 
-  return requirements;
+  return { requirements, campaignTableData };
 }
 
 /**
@@ -1077,7 +1351,7 @@ function parseCampaignTable() {
   }
 
   try {
-    const requirements = parseCampaignTableText(text);
+    const { requirements, campaignTableData } = parseCampaignTableText(text);
 
     if (requirements.length === 0) {
       resultDiv.innerHTML = '<div style="color: #ef4444; padding: 10px; background: #fee2e2; border-radius: 6px;">⚠️ Nepodařilo se rozpoznat žádné požadavky</div>';
@@ -1087,6 +1361,7 @@ function parseCampaignTable() {
 
     // Store in appState
     appState.campaignRequirements = requirements;
+    appState.campaignTableData = campaignTableData;
 
     // Calculate totals
     const totalRequirements = requirements.length;
@@ -1178,7 +1453,21 @@ function toggleTableInput() {
  * @param {File} zipFile - ZIP file
  * @returns {Promise<Array<File>>} Array of image File objects with folderPath property
  */
-async function extractImagesFromZIP(zipFile) {
+/**
+ * Extract images from ZIP file, handling nested ZIPs and HTML5 banners
+ * @param {File} zipFile - ZIP file to extract
+ * @param {number} depth - Current recursion depth (for limiting)
+ * @param {string} parentPath - Parent folder path for nested files
+ * @returns {Promise<Array>} Array of extracted files
+ */
+async function extractImagesFromZIP(zipFile, depth = 0, parentPath = '') {
+  // Limit recursion depth to prevent infinite loops
+  const MAX_DEPTH = 2;
+  if (depth > MAX_DEPTH) {
+    console.warn(`Max ZIP nesting depth (${MAX_DEPTH}) reached, skipping deeper extraction`);
+    return [];
+  }
+
   try {
     const zip = new JSZip();
     const contents = await zip.loadAsync(zipFile);
@@ -1190,20 +1479,46 @@ async function extractImagesFromZIP(zipFile) {
         continue;
       }
 
-      // Check if it's an image file
       const extension = filename.split('.').pop().toLowerCase();
-      if (['jpg', 'jpeg', 'png', 'gif'].includes(extension)) {
+      const baseName = filename.split('/').pop();
+      const pathParts = filename.split('/');
+      const folderPath = parentPath
+        ? `${parentPath}/${pathParts.slice(0, -1).join('/')}`
+        : (pathParts.length > 1 ? pathParts.slice(0, -1).join('/') : '');
+
+      // Check if this is a nested ZIP file
+      if (extension === 'zip') {
+        const blob = await zipEntry.async('blob');
+        const nestedZipFile = new File([blob], baseName, { type: 'application/zip' });
+
+        // Check if nested ZIP is HTML5 banner
+        const isHTML5 = typeof HTML5Validator !== 'undefined' &&
+          (HTML5Validator.isHTML5BannerByName(baseName) || await HTML5Validator.isHTML5ZIP(nestedZipFile));
+
+        if (isHTML5) {
+          // Keep HTML5 banner as whole ZIP file
+          nestedZipFile.folderPath = folderPath;
+          imageFiles.push(nestedZipFile);
+          console.log(`Found nested HTML5 banner: ${baseName} in ${folderPath}`);
+        } else {
+          // Regular nested ZIP - extract recursively
+          console.log(`Extracting nested ZIP: ${baseName} at depth ${depth + 1}`);
+          const nestedFiles = await extractImagesFromZIP(nestedZipFile, depth + 1, folderPath);
+          imageFiles.push(...nestedFiles);
+        }
+      }
+      // Check if it's an image file
+      else if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif'].includes(extension)) {
         // Extract file as blob
         const blob = await zipEntry.async('blob');
 
         // Create a File object from the blob
-        const file = new File([blob], filename.split('/').pop(), {
+        const file = new File([blob], baseName, {
           type: `image/${extension === 'jpg' ? 'jpeg' : extension}`
         });
 
         // Store folder path for system detection
-        const pathParts = filename.split('/');
-        file.folderPath = pathParts.length > 1 ? pathParts.slice(0, -1).join('/') : '';
+        file.folderPath = folderPath;
 
         imageFiles.push(file);
       }
@@ -1392,11 +1707,28 @@ async function validateCompatibility() {
     const compatible = [];
     const incompatible = [];
 
+    // Skip social media files - they don't validate against ad systems
+    if (fileData.isSocialMedia) {
+      appState.validationResults[fileData.name] = {
+        file: fileData,
+        compatible: [],
+        incompatible: [],
+        isSocialMedia: true
+      };
+      continue;
+    }
+
     // Check against all networks and tiers
     const networks = ['ADFORM', 'SOS', 'ONEGAR', 'SKLIK'];
 
     for (const network of networks) {
-      const tiers = ['HIGH', 'LOW'];
+      // Check if format is allowed for this system
+      if (fileData.detectedFormat && !isFormatAllowedForSystem(fileData.detectedFormat, network)) {
+        continue; // Skip validation for disallowed systems
+      }
+
+      // SOS: Only HIGH tier (no LOW tier)
+      const tiers = network === 'SOS' ? ['HIGH'] : ['HIGH', 'LOW'];
 
       for (const tier of tiers) {
         const matches = findMatchingFormats(fileData, network, tier);
@@ -1413,6 +1745,7 @@ async function validateCompatibility() {
               spec: match.spec
             });
           } else {
+            // Only add to incompatible if format is allowed for this system
             incompatible.push({
               network: network,
               tier: tier,
@@ -1425,51 +1758,55 @@ async function validateCompatibility() {
       }
     }
 
-    // Check HP EXCLUSIVE (no tier)
-    const exclusiveMatches = findMatchingFormats(fileData, 'HP_EXCLUSIVE', null);
-    for (const match of exclusiveMatches) {
-      const validation = validateFileForFormat(fileData, match.spec);
+    // Check HP EXCLUSIVE (no tier) - only if format is allowed
+    if (!fileData.detectedFormat || isFormatAllowedForSystem(fileData.detectedFormat, 'HP_EXCLUSIVE')) {
+      const exclusiveMatches = findMatchingFormats(fileData, 'HP_EXCLUSIVE', null);
+      for (const match of exclusiveMatches) {
+        const validation = validateFileForFormat(fileData, match.spec);
 
-      if (validation.valid && match.sizeValid) {
-        compatible.push({
-          network: 'HP_EXCLUSIVE',
-          tier: null,
-          format: match.specKey,
-          formatDisplay: match.formatDisplay,
-          spec: match.spec
-        });
-      } else {
-        incompatible.push({
-          network: 'HP_EXCLUSIVE',
-          tier: null,
-          format: match.specKey,
-          formatDisplay: match.formatDisplay,
-          reason: validation.issues.join(', ') || `Velikost překračuje limit`
-        });
+        if (validation.valid && match.sizeValid) {
+          compatible.push({
+            network: 'HP_EXCLUSIVE',
+            tier: null,
+            format: match.specKey,
+            formatDisplay: match.formatDisplay,
+            spec: match.spec
+          });
+        } else {
+          incompatible.push({
+            network: 'HP_EXCLUSIVE',
+            tier: null,
+            format: match.specKey,
+            formatDisplay: match.formatDisplay,
+            reason: validation.issues.join(', ') || `Velikost překračuje limit`
+          });
+        }
       }
     }
 
-    // Check GOOGLE_ADS (no tier)
-    const googleAdsMatches = findMatchingFormats(fileData, 'GOOGLE_ADS', null);
-    for (const match of googleAdsMatches) {
-      const validation = validateFileForFormat(fileData, match.spec);
+    // Check GOOGLE_ADS (no tier) - only if format is allowed
+    if (!fileData.detectedFormat || isFormatAllowedForSystem(fileData.detectedFormat, 'GOOGLE_ADS')) {
+      const googleAdsMatches = findMatchingFormats(fileData, 'GOOGLE_ADS', null);
+      for (const match of googleAdsMatches) {
+        const validation = validateFileForFormat(fileData, match.spec);
 
-      if (validation.valid && match.sizeValid) {
-        compatible.push({
-          network: 'GOOGLE_ADS',
-          tier: null,
-          format: match.specKey,
-          formatDisplay: match.formatDisplay,
-          spec: match.spec
-        });
-      } else {
-        incompatible.push({
-          network: 'GOOGLE_ADS',
-          tier: null,
-          format: match.specKey,
-          formatDisplay: match.formatDisplay,
-          reason: validation.issues.join(', ') || `Velikost překračuje limit`
-        });
+        if (validation.valid && match.sizeValid) {
+          compatible.push({
+            network: 'GOOGLE_ADS',
+            tier: null,
+            format: match.specKey,
+            formatDisplay: match.formatDisplay,
+            spec: match.spec
+          });
+        } else {
+          incompatible.push({
+            network: 'GOOGLE_ADS',
+            tier: null,
+            format: match.specKey,
+            formatDisplay: match.formatDisplay,
+            reason: validation.issues.join(', ') || `Velikost překračuje limit`
+          });
+        }
       }
     }
 
@@ -1912,7 +2249,10 @@ function displayNetworkSelection() {
   networkAggregates.sort((a, b) => b.eligibleAssets - a.eligibleAssets);
 
   for (const stats of networkAggregates) {
+    const isSOS = stats.network === 'SOS';
     const hasHPExclusive = stats.network === 'HP_EXCLUSIVE';
+    const hasGoogleAds = stats.network === 'GOOGLE_ADS';
+    const showTierSelector = !hasHPExclusive && !hasGoogleAds;
 
     html += `
       <div class="network-selection-card" id="network-card-${stats.network}" style="border: 2px solid #10b981; border-radius: 12px; padding: 20px; background: #f0fdf4; transition: all 0.2s;">
@@ -1930,6 +2270,25 @@ function displayNetworkSelection() {
             </div>
           </div>
         </label>
+
+        ${showTierSelector ? `
+          <div class="tier-selector" style="margin-top: 15px; padding: 12px; background: #ffffff; border: 1px solid #d1d5db; border-radius: 6px;">
+            <label for="tier_${stats.network}" style="font-weight: 600; color: #1f2937; display: block; margin-bottom: 8px;">
+              Tier:
+            </label>
+            ${isSOS ? `
+              <div style="padding: 8px; background: #f3f4f6; border-radius: 4px; color: #6b7280; font-size: 14px;">
+                HIGH (pouze)
+              </div>
+            ` : `
+              <select id="tier_${stats.network}" onchange="updateNetworkTier('${stats.network}')" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px;">
+                <option value="LOW" selected>LOW</option>
+                <option value="HIGH">HIGH</option>
+                <option value="BOTH">Oba (LOW i HIGH)</option>
+              </select>
+            `}
+          </div>
+        ` : ''}
 
         <div class="network-actions" style="margin-top: 12px;">
           <button class="toggle-banner-selection-btn" onclick="toggleExportPreview('${stats.network}')"
@@ -2316,13 +2675,41 @@ function updateSelectedNetworks() {
         }
       }
 
-      // Store without tier - tier is determined in step 5
+      // Get tier selection for this network
+      const tierSelect = document.getElementById(`tier_${network}`);
+      let tiers = [];
+
+      if (network === 'SOS') {
+        // SOS only has HIGH tier
+        tiers = ['HIGH'];
+      } else if (network === 'HP_EXCLUSIVE' || network === 'GOOGLE_ADS') {
+        // HP_EXCLUSIVE and GOOGLE_ADS have no tiers
+        tiers = ['NONE'];
+      } else if (tierSelect) {
+        const tierValue = tierSelect.value;
+        if (tierValue === 'BOTH') {
+          tiers = ['LOW', 'HIGH'];
+        } else {
+          tiers = [tierValue];
+        }
+      } else {
+        // Default to LOW if no tier selector found
+        tiers = ['LOW'];
+      }
+
+      // Store with tier information
       appState.selectedNetworks.push({
         network: network,
-        selectedBanners: selectedBanners
+        selectedBanners: selectedBanners,
+        tiers: tiers
       });
     }
   }
+}
+
+function updateNetworkTier(network) {
+  // Update selected networks when tier changes
+  updateSelectedNetworks();
 }
 
 function updateBannerSelection(network, fileName) {
@@ -2588,35 +2975,20 @@ function displayExportSettings() {
 
   let html = '';
 
-  // Display each selected network with tier toggle and sections
+  // Display each selected network with selected tiers
   for (const selection of appState.selectedNetworks) {
     const network = selection.network;
-    const hasHPExclusive = network === 'HP_EXCLUSIVE';
+    const tiers = selection.tiers || ['LOW']; // Default to LOW if no tiers specified
 
     html += `<div class="network-tier-container" style="margin-bottom: 30px;">`;
 
-    // Tier toggle (only for non-HP_EXCLUSIVE networks)
-    if (!hasHPExclusive) {
-      html += `
-        <div class="tier-toggle-section" style="margin-bottom: 20px; padding: 15px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
-          <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-            <input type="checkbox" id="tierToggle_${network}" onchange="toggleHighTierSection('${network}')" style="width: 20px; height: 20px; cursor: pointer; accent-color: #10b981;">
-            <span style="font-weight: 600; font-size: 16px;">Zobrazit a zkopírovat nastavení High tier</span>
-          </label>
-          <div class="helper-text" style="margin-left: 30px; margin-top: 5px; font-size: 13px; color: #6b7280;">Zkopíruje nastavení z LOW tier a zobrazí sekci HIGH tier</div>
-        </div>
-      `;
-    }
+    // Display section for each selected tier
+    for (let i = 0; i < tiers.length; i++) {
+      const tier = tiers[i];
+      const marginTop = i > 0 ? 'margin-top: 20px;' : '';
 
-    // LOW tier section (always visible)
-    html += `<div id="tierSection_${network}_LOW">`;
-    html += buildNetworkTierSection(network, 'LOW', selection, campaignName, contentName, landingURL);
-    html += `</div>`;
-
-    // HIGH tier section (hidden by default)
-    if (!hasHPExclusive) {
-      html += `<div id="tierSection_${network}_HIGH" style="display: none; margin-top: 20px;">`;
-      html += buildNetworkTierSection(network, 'HIGH', selection, campaignName, contentName, landingURL);
+      html += `<div id="tierSection_${network}_${tier}" style="${marginTop}">`;
+      html += buildNetworkTierSection(network, tier, selection, campaignName, contentName, landingURL);
       html += `</div>`;
     }
 
@@ -2624,88 +2996,11 @@ function displayExportSettings() {
   }
 
   if (html === '') {
-    html = '<div style="padding: 30px; text-align: center; color: #6b7280;">Nejsou vybrány žádné systémy. Vraťte se na krok 4 a vyberte systémy.</div>';
+    html = '<div style="padding: 30px; text-align: center; color: #6b7280;">Nejsou vybrány žádné systémy. Vraťte se na krok 5 a vyberte systémy.</div>';
   }
 
   exportNetworksSection.innerHTML = html;
 }
-
-/**
- * Toggle HIGH tier section visibility and copy LOW tier settings
- * @param {string} network - Network name
- */
-function toggleHighTierSection(network) {
-  const toggle = document.getElementById(`tierToggle_${network}`);
-  const highSection = document.getElementById(`tierSection_${network}_HIGH`);
-
-  if (!toggle || !highSection) return;
-
-  if (toggle.checked) {
-    // Copy LOW tier settings to HIGH tier
-    copyLowToHighTierSettings(network);
-
-    // Show HIGH tier section
-    highSection.style.display = 'block';
-  } else {
-    // Hide HIGH tier section
-    highSection.style.display = 'none';
-  }
-}
-
-/**
- * Copy LOW tier settings to HIGH tier for a network
- * @param {string} network - Network name
- */
-function copyLowToHighTierSettings(network) {
-  // Find the selection for this network
-  const selection = appState.selectedNetworks.find(s => s.network === network);
-  if (!selection) return;
-
-  // Get eligible files for this network (both LOW and HIGH will have same files)
-  const eligibleFiles = [];
-  for (const [fileName, validation] of Object.entries(appState.validationResults)) {
-    if (!selection.selectedBanners || !selection.selectedBanners.includes(fileName)) {
-      continue;
-    }
-    const matches = validation.compatible.filter(c => c.network === network);
-    if (matches.length > 0) {
-      eligibleFiles.push({ fileName, file: validation.file });
-    }
-  }
-
-  // Copy settings for each file
-  for (let idx = 0; idx < eligibleFiles.length; idx++) {
-    const lowFileId = `${network}_LOW_${idx}`;
-    const highFileId = `${network}_HIGH_${idx}`;
-
-    // Get LOW tier elements
-    const lowFormat = document.getElementById(`format_${lowFileId}`);
-    const lowService = document.getElementById(`service_${lowFileId}`);
-    const lowAnchor = document.getElementById(`anchor_${lowFileId}`);
-
-    // Get HIGH tier elements
-    const highFormat = document.getElementById(`format_${highFileId}`);
-    const highService = document.getElementById(`service_${highFileId}`);
-    const highAnchor = document.getElementById(`anchor_${highFileId}`);
-
-    // Copy values
-    if (lowFormat && highFormat) {
-      highFormat.value = lowFormat.value;
-    }
-    if (lowService && highService) {
-      highService.value = lowService.value;
-    }
-    if (lowAnchor && highAnchor) {
-      highAnchor.value = lowAnchor.value;
-    }
-
-    // Update HIGH tier URL with copied values
-    if (highFormat && highService && highAnchor) {
-      updateBannerURL(highFileId, network, 'HIGH', idx);
-    }
-  }
-}
-
 /**
  * Update banner URL when format, service, or anchor changes
  */

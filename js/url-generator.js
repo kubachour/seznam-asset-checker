@@ -101,14 +101,16 @@ function buildTerm(formatName, variant = null) {
 
 /**
  * Generate complete URL with UTM parameters
+ * UPDATED: Implements strict per-network UTM requirements
  * @param {Object} params - URL generation parameters
  * @param {Object} params.fileData - Analyzed file data
  * @param {string} params.network - Network name (ADFORM, SOS, ONEGAR, SKLIK, HP_EXCLUSIVE, GOOGLE_ADS)
  * @param {string} params.tier - Tier level (HIGH, LOW, MKT) or null
  * @param {string} params.campaignName - Campaign name
+ * @param {string} params.contentName - Content name (for utm_content)
  * @param {string} params.landingPage - Landing page URL
  * @param {string} params.formatName - Format display name
- * @param {string} params.variant - Optional variant (hp, obsah, sport, etc.)
+ * @param {string} params.placement - Optional placement/umístění (hp, obsah, sport, zpravy, etc.)
  * @returns {string} Complete URL with UTM parameters
  */
 function generateURL(params) {
@@ -117,23 +119,104 @@ function generateURL(params) {
     network,
     tier,
     campaignName,
+    contentName = '',
     landingPage,
     formatName,
-    variant = null
+    placement = null
   } = params;
 
-  // Build UTM parameters
-  const utmSource = `seznam_${network.toLowerCase()}`;
-  const utmMedium = buildMedium(formatName, tier, network, fileData.dimensions);
-  const utmCampaign = campaignName;
-  const utmContent = buildContent(
-    campaignName,
-    formatName,
-    fileData.dimensions,
-    variant,
-    fileData.fileType === 'html5'
-  );
-  const utmTerm = buildTerm(formatName, variant);
+  let utmSource, utmMedium, utmCampaign, utmContent, utmTerm;
+
+  // Network-specific UTM generation
+  switch (network) {
+    case 'ADFORM':
+      // ADFORM: utm_source = seznam_onegar (routes through Onegar)
+      utmSource = 'seznam_onegar';
+      utmMedium = `banner_selfpromo_${tier.toLowerCase()}`;
+      utmCampaign = campaignName; // Campaign name ONLY, no additions
+      utmContent = contentName ? `${campaignName}-${contentName}_${formatName}_${placement || ''}`.replace(/_$/, '') : `${campaignName}-content_${formatName}_${placement || ''}`.replace(/_$/, '');
+      utmTerm = placement ? `banner-${placement}` : 'banner'; // "banner" + placement
+      break;
+
+    case 'SOS':
+      // SOS: Special utm_medium based on format
+      utmSource = 'seznam_sos';
+
+      // utm_medium based on format (SOS only has HIGH tier)
+      if (formatName === 'inarticle' || formatName.includes('in-article')) {
+        utmMedium = 'inarticle_selfpromo'; // No tier suffix
+      } else if (formatName.includes('exclusive')) {
+        utmMedium = 'exclusive_selfpromo'; // No tier suffix
+      } else {
+        utmMedium = 'banner_selfpromo_high'; // Standard banners
+      }
+
+      utmCampaign = campaignName; // Campaign name ONLY, no additions
+
+      // utm_content: {campaign}-{content}_{format}_{placement}
+      if (contentName) {
+        utmContent = `${campaignName}-${contentName}_${formatName}${placement ? '_' + placement : ''}`;
+      } else {
+        utmContent = `${campaignName}-content_${formatName}${placement ? '_' + placement : ''}`;
+      }
+
+      // utm_term: {format_name}_{placement} (if placement filled)
+      utmTerm = placement ? `${formatName}_${placement}` : formatName;
+      break;
+
+    case 'ONEGAR':
+      // ONEGAR: utm_source = seznam_onegar
+      utmSource = 'seznam_onegar';
+      utmMedium = formatName === 'kombi' ? 'kombi_selfpromo' : `banner_selfpromo_${tier.toLowerCase()}`;
+      utmCampaign = campaignName; // Campaign name ONLY, no additions
+      utmContent = contentName ? `${campaignName}-${contentName}_${formatName}${placement ? '_' + placement : ''}` : `${campaignName}-content_${formatName}${placement ? '_' + placement : ''}`;
+      utmTerm = placement ? `${formatName}_${placement}` : formatName;
+      break;
+
+    case 'SKLIK':
+      // SKLIK: utm_campaign can have optional additions (dynamic)
+      utmSource = 'seznam_sklik';
+
+      if (formatName === 'kombi') {
+        utmMedium = 'kombi_selfpromo';
+      } else if (formatName.includes('interscroller')) {
+        utmMedium = 'interscroller_selfpromo';
+      } else if (formatName.includes('branding')) {
+        utmMedium = `branding_selfpromo_${tier.toLowerCase()}`;
+      } else {
+        utmMedium = `banner_selfpromo_${tier.toLowerCase()}`;
+      }
+
+      // utm_campaign: campaign name + optional additions (kept flexible for Sklik)
+      utmCampaign = campaignName;
+      utmContent = contentName ? `${campaignName}-${contentName}_${formatName}${placement ? '_' + placement : ''}` : `${campaignName}-content_${formatName}${placement ? '_' + placement : ''}`;
+      utmTerm = placement ? `${formatName}_${placement}` : formatName;
+      break;
+
+    case 'HP_EXCLUSIVE':
+      utmSource = 'seznam_hp_exclusive';
+      utmMedium = 'exclusive_selfpromo';
+      utmCampaign = campaignName;
+      utmContent = contentName ? `${campaignName}-${contentName}_${formatName}` : `${campaignName}-content_${formatName}`;
+      utmTerm = formatName;
+      break;
+
+    case 'GOOGLE_ADS':
+      utmSource = 'seznam_google_ads';
+      utmMedium = `banner_selfpromo_${tier ? tier.toLowerCase() : 'high'}`;
+      utmCampaign = campaignName;
+      utmContent = contentName ? `${campaignName}-${contentName}_${formatName}` : `${campaignName}-content_${formatName}`;
+      utmTerm = formatName;
+      break;
+
+    default:
+      // Fallback to original behavior
+      utmSource = `seznam_${network.toLowerCase()}`;
+      utmMedium = buildMedium(formatName, tier, network, fileData.dimensions);
+      utmCampaign = campaignName;
+      utmContent = buildContent(campaignName, formatName, fileData.dimensions, placement, fileData.fileType === 'html5');
+      utmTerm = buildTerm(formatName, placement);
+  }
 
   // Build URL
   const separator = landingPage.includes('?') ? '&' : '?';
@@ -197,16 +280,18 @@ function generateAllURLs(files, selectedNetworks, campaignName, landingPage, var
 
 /**
  * Generate URL for a specific file and network combination
+ * UPDATED: Uses new parameter structure with contentName and placement
  * @param {Object} fileData - Analyzed file data
  * @param {Object} matchedFormat - Matched format from validation
  * @param {string} network - Network name
  * @param {string} tier - Tier level
  * @param {string} campaignName - Campaign name
+ * @param {string} contentName - Content name (optional)
  * @param {string} landingPage - Landing page URL
- * @param {string} variant - Optional variant
+ * @param {string} placement - Optional placement (hp, obsah, sport, zpravy, etc.)
  * @returns {string} Generated URL
  */
-function generateURLForMatch(fileData, matchedFormat, network, tier, campaignName, landingPage, variant = null) {
+function generateURLForMatch(fileData, matchedFormat, network, tier, campaignName, contentName, landingPage, placement = null) {
   const formatName = matchedFormat.formatDisplay;
 
   return generateURL({
@@ -214,9 +299,10 @@ function generateURLForMatch(fileData, matchedFormat, network, tier, campaignNam
     network,
     tier,
     campaignName,
+    contentName,
     landingPage,
     formatName,
-    variant
+    placement
   });
 }
 

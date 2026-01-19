@@ -189,6 +189,130 @@ function getFileFormat(file) {
 }
 
 /**
+ * Detect format type from filename and folder path
+ * Priority: Name-based detection over dimension-based detection
+ * @param {string} filename - File name
+ * @param {string} folderPath - Folder path (optional)
+ * @returns {Object} { detectedFormat, detectedSystem, confidence, isSocialMedia }
+ */
+function detectFormatFromName(filename, folderPath = '') {
+  const searchText = (filename + ' ' + folderPath).toLowerCase();
+
+  // Social media detection (exclude from all ad systems)
+  const socialKeywords = ['some', 'social', 'facebook', 'linkedin', 'twitter', 'instagram', 'fb'];
+  for (const keyword of socialKeywords) {
+    if (searchText.includes(keyword)) {
+      return {
+        detectedFormat: 'social-media',
+        detectedSystem: null,
+        confidence: 'high',
+        isSocialMedia: true
+      };
+    }
+  }
+
+  // SOS-exclusive formats
+  if (searchText.includes('spincube') || searchText.includes('spin-cube')) {
+    return {
+      detectedFormat: 'spincube',
+      detectedSystem: 'SOS',
+      confidence: 'high',
+      isSocialMedia: false
+    };
+  }
+
+  if (searchText.includes('inarticle') || searchText.includes('in-article') || searchText.includes('in-articl')) {
+    return {
+      detectedFormat: 'inarticle',
+      detectedSystem: 'SOS',
+      confidence: 'high',
+      isSocialMedia: false
+    };
+  }
+
+  if (searchText.includes('exclusive')) {
+    return {
+      detectedFormat: 'exclusive',
+      detectedSystem: 'SOS',
+      confidence: 'high',
+      isSocialMedia: false
+    };
+  }
+
+  if (searchText.includes('spinner')) {
+    return {
+      detectedFormat: 'spinner',
+      detectedSystem: 'SOS',
+      confidence: 'high',
+      isSocialMedia: false
+    };
+  }
+
+  if (searchText.includes('scratcher') || searchText.includes('scratch')) {
+    return {
+      detectedFormat: 'branding-scratcher',
+      detectedSystem: 'SOS',
+      confidence: 'high',
+      isSocialMedia: false
+    };
+  }
+
+  if (searchText.includes('uncover')) {
+    return {
+      detectedFormat: 'branding-uncover',
+      detectedSystem: 'SOS',
+      confidence: 'high',
+      isSocialMedia: false
+    };
+  }
+
+  if (searchText.includes('interscroller') || searchText.includes('inter-scroller')) {
+    return {
+      detectedFormat: 'interscroller',
+      detectedSystem: null, // Can be SOS or SKLIK
+      confidence: 'high',
+      isSocialMedia: false
+    };
+  }
+
+  // General format keywords
+  if (searchText.includes('branding')) {
+    return {
+      detectedFormat: 'branding',
+      detectedSystem: null, // Can be SOS or SKLIK
+      confidence: 'medium',
+      isSocialMedia: false
+    };
+  }
+
+  if (searchText.includes('kombi')) {
+    return {
+      detectedFormat: 'kombi',
+      detectedSystem: null, // Can be ONEGAR or SKLIK
+      confidence: 'medium',
+      isSocialMedia: false
+    };
+  }
+
+  if (searchText.includes('html5') || searchText.includes('html-5')) {
+    return {
+      detectedFormat: 'html5-banner',
+      detectedSystem: null, // Can be multiple systems
+      confidence: 'medium',
+      isSocialMedia: false
+    };
+  }
+
+  // No specific format detected from name
+  return {
+    detectedFormat: null,
+    detectedSystem: null,
+    confidence: 'none',
+    isSocialMedia: false
+  };
+}
+
+/**
  * Generate base64 preview/thumbnail for a file
  * @param {File} file - File object
  * @param {string} fileType - File type (image)
@@ -214,9 +338,12 @@ async function generatePreview(file, fileType) {
  * @param {File} file - File to analyze
  * @returns {Promise<Object>} Analysis result object
  */
-async function analyzeFile(file) {
+async function analyzeFile(file, folderPath = '') {
   const fileType = getFileFormat(file);
   const extension = file.name.split('.').pop().toLowerCase();
+
+  // Detect format from name (priority over dimension-based detection)
+  const formatDetection = detectFormatFromName(file.name, folderPath);
 
   const analysis = {
     name: file.name,
@@ -233,7 +360,14 @@ async function analyzeFile(file) {
     colorSpaceValid: true,
     preview: null,
     isHTML5: false,
-    html5Validation: null
+    html5Validation: null,
+    // Format detection from name
+    detectedFormat: formatDetection.detectedFormat,
+    detectedSystem: formatDetection.detectedSystem,
+    formatConfidence: formatDetection.confidence,
+    isSocialMedia: formatDetection.isSocialMedia,
+    formatSource: formatDetection.detectedFormat ? 'name' : null,
+    folderPath: folderPath
   };
 
   try {
@@ -323,6 +457,7 @@ if (typeof module !== 'undefined' && module.exports) {
     readImageDimensions,
     checkColorSpace,
     getFileFormat,
+    detectFormatFromName,
     generatePreview,
     analyzeFile,
     analyzeFiles

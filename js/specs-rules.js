@@ -66,7 +66,7 @@ const CREATIVE_SPECS = {
   },
 
   // =============================================================================
-  // SOS SPECIFICATIONS (HIGH & LOW tiers)
+  // SOS SPECIFICATIONS (HIGH tier ONLY - no LOW tier)
   // =============================================================================
   SOS: {
     'sponzor-sluzby': {
@@ -75,7 +75,7 @@ const CREATIVE_SPECS = {
       maxSize: 100, // KB for images
       formats: ['jpg', 'png', 'gif'],
       device: 'Desktop/Mobil',
-      tier: ['HIGH', 'LOW']
+      tier: ['HIGH']
     },
     'mobilni-square': {
       name: 'Mobilní square',
@@ -83,7 +83,7 @@ const CREATIVE_SPECS = {
       maxSize: 100,
       formats: ['jpg', 'png', 'gif'],
       device: 'Mobil',
-      tier: ['HIGH', 'LOW']
+      tier: ['HIGH']
     },
     'skyscraper': {
       name: 'Skyscraper',
@@ -91,7 +91,7 @@ const CREATIVE_SPECS = {
       maxSize: 100,
       formats: ['jpg', 'png', 'gif'],
       device: 'Desktop',
-      tier: ['HIGH', 'LOW']
+      tier: ['HIGH']
     },
     'wallpaper': {
       name: 'Wallpaper/Produktová plachta',
@@ -99,7 +99,7 @@ const CREATIVE_SPECS = {
       maxSize: 100,
       formats: ['jpg', 'png', 'gif'],
       device: 'Desktop/Mobil',
-      tier: ['HIGH', 'LOW']
+      tier: ['HIGH']
     },
     'mobilni-square-premium': {
       name: 'Mobilní square premium / Mobilní square',
@@ -107,7 +107,7 @@ const CREATIVE_SPECS = {
       maxSize: 100,
       formats: ['jpg', 'png', 'gif'],
       device: 'Mobil',
-      tier: ['HIGH', 'LOW']
+      tier: ['HIGH']
     },
     'leaderboard': {
       name: 'Leaderboard',
@@ -115,7 +115,7 @@ const CREATIVE_SPECS = {
       maxSize: 100,
       formats: ['jpg', 'png', 'gif'],
       device: 'Desktop',
-      tier: ['HIGH', 'LOW']
+      tier: ['HIGH']
     },
     'rectangle': {
       name: 'Rectangle',
@@ -123,7 +123,7 @@ const CREATIVE_SPECS = {
       maxSize: 100,
       formats: ['jpg', 'png', 'gif'],
       device: 'Desktop',
-      tier: ['HIGH', 'LOW']
+      tier: ['HIGH']
     },
     'branding': {
       name: 'Branding',
@@ -131,7 +131,7 @@ const CREATIVE_SPECS = {
       maxSize: 600, // Updated to 600 KB
       formats: ['jpg', 'png', 'gif', 'html5'],
       device: 'Desktop',
-      tier: ['HIGH', 'LOW'],
+      tier: ['HIGH'],
       notes: 'Main message: 1366×720px upper area. Podporuje HTML5. Video panel option: MP4, 720p, max 100MB, 60s.'
     },
     'branding-sklik': {
@@ -140,7 +140,7 @@ const CREATIVE_SPECS = {
       maxSize: 500, // KB
       formats: ['jpg', 'png', 'gif', 'webp', 'avif'],
       device: 'Desktop',
-      tier: ['HIGH', 'LOW'],
+      tier: ['HIGH'],
       notes: 'Safe area: 1366×720px (top placement). Protective margin: 100px from edges. Image cannot be transparent.'
     },
     'branding-scratcher': {
@@ -149,7 +149,7 @@ const CREATIVE_SPECS = {
       maxSize: 600, // Updated to 600 KB
       formats: ['jpg'], // Only JPG
       device: 'Desktop',
-      tier: ['HIGH', 'LOW'],
+      tier: ['HIGH'],
       notes: 'Potřeba důkladně pročíst požadavky v odkaze'
     },
     'branding-uncover': {
@@ -158,19 +158,28 @@ const CREATIVE_SPECS = {
       maxSize: 600, // Updated to 600 KB
       formats: ['jpg', 'png', 'gif'], // Non-animated GIF only
       device: 'Desktop',
-      tier: ['HIGH', 'LOW'],
+      tier: ['HIGH'],
       multiFile: true,
       fileCount: 2,
       fileRoles: ['cover', 'uncover'],
       notes: 'Dvě kreativy: cover a uncover, potřeba důkladně pročíst požadavky v odkaze'
     },
+    'inarticle': {
+      name: 'Inarticle',
+      dimensions: ['640x480', '338x190', '400x300', '800x533', '1200x628', '1200x1200'],
+      maxSize: 500, // UPDATED: 500 KB limit for inarticle
+      formats: ['jpg', 'png'],
+      device: 'Desktop/Mobil',
+      tier: ['HIGH'],
+      notes: 'Inarticle placement. 500KB limit. Various dimensions supported.'
+    },
     'nativni-inzerat': {
       name: 'Nativní inzerát (In-article)',
       dimensions: ['640x480', '338x190', '400x300', '800x533'],
-      maxSize: 300,
+      maxSize: 500, // UPDATED: 500 KB limit to match inarticle
       formats: ['jpg', 'png'],
       device: 'Desktop/Mobil',
-      tier: ['HIGH', 'LOW'],
+      tier: ['HIGH'],
       notes: 'In-article placement. Various dimensions supported.'
     },
     'spincube': {
@@ -179,7 +188,7 @@ const CREATIVE_SPECS = {
       maxSize: 250, // 250 KB per image
       formats: ['jpg', 'png', 'gif'], // Non-animated GIF only
       device: 'Mobil',
-      tier: ['HIGH', 'LOW'],
+      tier: ['HIGH'],
       multiFile: true,
       fileCount: 4,
       fileRoles: ['banner'],
@@ -191,7 +200,7 @@ const CREATIVE_SPECS = {
       maxSize: 250,
       formats: ['jpg', 'png', 'gif', 'webp', 'avif'],
       device: 'Mobil',
-      tier: ['HIGH', 'LOW'],
+      tier: ['HIGH'],
       notes: 'Safe zone: 700×920px for main message. Podporuje HTML5.'
     },
     'spinner': {
@@ -200,11 +209,20 @@ const CREATIVE_SPECS = {
       maxSize: 250, // KB
       formats: ['jpg', 'png', 'gif'], // Non-animated GIF only
       device: 'Desktop',
-      tier: ['HIGH', 'LOW'],
+      tier: ['HIGH'],
       multiFile: true,
       fileCount: 4,
       fileRoles: ['side1', 'side2', 'side3', 'side4'],
       notes: '4× 300×600 banners required (or 2 used twice). Each can have different target URL. Must be visually distinct from page content.'
+    },
+    'exclusive': {
+      name: 'Exclusive',
+      dimensions: ['480x480', '480x300', '461x100', '1100x500'],
+      maxSize: 300,
+      formats: ['jpg', 'png', 'gif'],
+      device: 'Desktop/Mobil',
+      tier: ['HIGH'],
+      notes: 'Exclusive format for SOS. Various dimensions.'
     }
   },
 
@@ -508,6 +526,89 @@ const CREATIVE_SPECS = {
     }
   }
 };
+
+// =============================================================================
+// FORMAT-TO-SYSTEM MAPPING (Strict rules for which formats are allowed on each system)
+// =============================================================================
+
+const FORMAT_SYSTEM_MAPPING = {
+  // SOS-exclusive formats (only deployed to SOS, HIGH tier only)
+  'inarticle': ['SOS'],
+  'spincube': ['SOS'],
+  'exclusive': ['SOS'],
+  'branding-scratcher': ['SOS'],
+  'branding-uncover': ['SOS'],
+  'spinner': ['SOS'],
+  'nativni-inzerat': ['SOS'], // In-article / native ad
+
+  // Branding - SOS and SKLIK
+  'branding': ['SOS', 'SKLIK'],
+  'branding-sklik': ['SKLIK'],
+
+  // Interscroller - SOS and SKLIK
+  'interscroller': ['SOS', 'SKLIK'],
+  'mobilni-interscroller': ['SOS', 'SKLIK'],
+
+  // Kombi - ONEGAR and SKLIK
+  'kombi': ['ONEGAR', 'SKLIK'],
+
+  // Standard banners - can be deployed to ADFORM, SOS, ONEGAR, SKLIK
+  'sponzor-sluzby': ['ADFORM', 'SOS', 'ONEGAR', 'SKLIK'],
+  'mobilni-square': ['ADFORM', 'SOS', 'ONEGAR', 'SKLIK'],
+  'mobilni-square-premium': ['ADFORM', 'SOS', 'ONEGAR', 'SKLIK'],
+  'skyscraper': ['ADFORM', 'SOS', 'ONEGAR', 'SKLIK'],
+  'skyscraper-sticky': ['SKLIK'],
+  'wallpaper': ['ADFORM', 'SOS', 'ONEGAR', 'SKLIK'],
+  'leaderboard': ['ADFORM', 'SOS', 'ONEGAR', 'SKLIK'],
+  'leaderboard-middle': ['SKLIK'],
+  'mobilni-leaderboard': ['SKLIK'],
+  'rectangle': ['ADFORM', 'SOS', 'ONEGAR', 'SKLIK'],
+
+  // HTML5 banners - ADFORM, ONEGAR, SKLIK (NOT SOS for most)
+  'html5-banner': ['ADFORM', 'ONEGAR', 'SKLIK'],
+
+  // HP Exclusive formats (HP_EXCLUSIVE system only)
+  'exclusive-desktop-trigger': ['HP_EXCLUSIVE'],
+  'exclusive-desktop-banner': ['HP_EXCLUSIVE'],
+  'exclusive-mobile-wallpaper': ['HP_EXCLUSIVE'],
+  'exclusive-mobile-square': ['HP_EXCLUSIVE'],
+  'exclusive-app-wallpaper': ['HP_EXCLUSIVE'],
+  'exclusive-app-square': ['HP_EXCLUSIVE'],
+
+  // Social media - NOT for any ad system (handled separately)
+  'social-media': []
+};
+
+/**
+ * Get allowed systems for a detected format
+ * @param {string} formatType - Detected format type (e.g., 'spincube', 'inarticle')
+ * @returns {Array<string>} Array of allowed system names
+ */
+function getAllowedSystemsForFormat(formatType) {
+  if (!formatType) return ['ADFORM', 'SOS', 'ONEGAR', 'SKLIK', 'HP_EXCLUSIVE']; // All systems if no format detected
+
+  const allowed = FORMAT_SYSTEM_MAPPING[formatType];
+  if (allowed) return allowed;
+
+  // Default: standard banner formats allowed on most systems
+  return ['ADFORM', 'SOS', 'ONEGAR', 'SKLIK'];
+}
+
+/**
+ * Check if a format is allowed for a specific system
+ * @param {string} formatType - Detected format type
+ * @param {string} system - System name (ADFORM, SOS, etc.)
+ * @returns {boolean} True if format is allowed for the system
+ */
+function isFormatAllowedForSystem(formatType, system) {
+  if (!formatType) return true; // If no format detected, allow validation
+
+  // Social media should never be validated against ad systems
+  if (formatType === 'social-media') return false;
+
+  const allowedSystems = getAllowedSystemsForFormat(formatType);
+  return allowedSystems.includes(system);
+}
 
 // =============================================================================
 // FORMAT NAME MAPPING FOR FILENAMES
@@ -943,7 +1044,10 @@ function detectMultiFileFormats(allFiles) {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     CREATIVE_SPECS,
+    FORMAT_SYSTEM_MAPPING,
     FORMAT_NAME_MAP,
+    getAllowedSystemsForFormat,
+    isFormatAllowedForSystem,
     getFormatDisplayName,
     parseDimension,
     findMatchingFormats,

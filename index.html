@@ -162,6 +162,9 @@
       <h2 class="step-heading">Nastavení exportu</h2>
       <p class="subtitle">Nastavte globální parametry pro export. Jednotlivé bannery můžete upravit v kroku 5.</p>
 
+      <!-- Campaign Table Data Info -->
+      <div id="tableDataInfo" style="display: none;"></div>
+
       <!-- Campaign Settings -->
       <div class="campaign-settings-form" style="margin: 20px 0;">
         <div class="form-group">
@@ -169,10 +172,31 @@
           <input type="text" id="campaignName" placeholder="např. sluzba-nazev-kampane" oninput="updateExportPreview()" />
         </div>
 
+        <!-- Multiple Content Variants -->
         <div class="form-group">
-          <label for="contentName">Content (základní název kreativy):</label>
-          <input type="text" id="contentName" placeholder="např. content" oninput="updateExportPreview()" />
-          <div class="helper-text">Použije se pro utm_content a název banneru</div>
+          <label>Content varianty:</label>
+          <div class="helper-text" style="margin-bottom: 10px;">Přidejte různé varianty contentu (např. "nuzky-a", "nuzky-b"). Pro každou variantu se vygeneruje samostatný export.</div>
+          <div id="contentVariantsList">
+            <div class="content-variant-row" style="display: flex; gap: 10px; margin-bottom: 8px; align-items: center;">
+              <input type="text" class="content-variant-input" placeholder="např. content" oninput="updateExportPreview()" style="flex: 1;" />
+              <button type="button" class="btn-remove-variant" onclick="removeContentVariant(this)" style="background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 14px; display: none;">✕</button>
+            </div>
+          </div>
+          <button type="button" class="btn-add-variant" onclick="addContentVariant()" style="background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; margin-top: 8px;">+ Přidat variantu</button>
+        </div>
+
+        <div class="form-group">
+          <label for="placement">Umístění (volitelné):</label>
+          <select id="placement" onchange="handlePlacementChange()" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 4px;">
+            <option value="">-- Vyberte umístění --</option>
+            <option value="hp">hp</option>
+            <option value="obsah">obsah</option>
+            <option value="sport">sport</option>
+            <option value="zpravy">zpravy</option>
+            <option value="custom">Vlastní...</option>
+          </select>
+          <input type="text" id="placementCustom" placeholder="Zadejte vlastní umístění" oninput="updateExportPreview()" style="display: none; margin-top: 8px; width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 4px;" />
+          <div class="helper-text">Použije se v utm_content a utm_term (např. hp, obsah, sport, zpravy)</div>
         </div>
 
         <div class="form-group">
