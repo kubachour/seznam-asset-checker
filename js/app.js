@@ -5,7 +5,7 @@
 // GLOBAL STATE
 // =============================================================================
 
-const APP_VERSION = 'v1.2.1'; // Increment sub-version with each commit
+const APP_VERSION = 'v1.3.0'; // Major update: Format detection fixes and workflow improvements
 
 const appState = {
   currentStep: 1,
@@ -316,11 +316,6 @@ function handleStepClick(stepNumber) {
     return;
   }
 
-  if (stepNumber >= 4 && !appState.campaignName) {
-    alert('Nejprve vyplňte nastavení exportu.');
-    return;
-  }
-
   if (stepNumber >= 5 && appState.selectedNetworks.length === 0) {
     alert('Vyberte alespoň jeden systém před přechodem na export.');
     return;
@@ -522,19 +517,13 @@ function goToStep(stepNumber) {
     displayNetworkToggles();
   }
 
-  if (stepNumber === 4) {
-    // Step 4: Export settings
-    applyCampaignTableData();
-    updateExportPreview();
-  }
-
-  if (stepNumber === 5 && Object.keys(appState.networkStats).length > 0) {
-    // Step 5: Network selection
+  if (stepNumber === 4 && Object.keys(appState.networkStats).length > 0) {
+    // Step 4: Network selection (formerly Step 5)
     displayNetworkSelection();
   }
 
-  if (stepNumber === 6) {
-    // Step 6: Export
+  if (stepNumber === 5) {
+    // Step 5: Export (formerly Step 6)
     displayExportSettings();
   }
 
@@ -1273,6 +1262,35 @@ function parseCampaignTableText(text) {
         dimensions: dimensions,
         maxSizeKB: maxSizeKB
       };
+
+      // Detect format type from name
+      const nameLower = name.toLowerCase();
+
+      // HTML5 detection - files with "html5" in requirement name must be HTML5 ZIP files
+      if (nameLower.includes('html5')) {
+        currentRequirement.isHTML5 = true;
+        currentRequirement.formatType = 'html5';
+        console.log(`    → Detected HTML5 requirement`);
+      }
+
+      // Static banner detection - files with "statika" must be static images (not HTML5)
+      if (nameLower.includes('statika') || nameLower.includes('static')) {
+        currentRequirement.isStatic = true;
+        currentRequirement.formatType = 'static';
+        console.log(`    → Detected static-only requirement`);
+      }
+
+      // SOS-exclusive format detection - auto-assign to SOS system
+      const sosFormats = ['in-article', 'inarticle', 'branding', 'spincube', 'spinner',
+                         'scratcher', 'uncover', 'interscroller', 'interactive', 'exclusive'];
+      const isSosFormat = sosFormats.some(format => nameLower.includes(format));
+
+      if (isSosFormat) {
+        currentRequirement.autoAssignSystem = 'SOS';
+        currentRequirement.isSosExclusive = true;
+        console.log(`    → Detected SOS-exclusive format, auto-assigning to SOS`);
+      }
+
       requirements.push(currentRequirement);
 
       // Store utm_campaign and targetUrl if provided
@@ -1865,7 +1883,18 @@ function validateAgainstCampaignTable() {
 
     // Check each dimension in requirement
     for (const dimension of requirement.dimensions) {
-      const matchingFiles = appState.uploadedFiles.filter(f => f.dimensions === dimension);
+      // Filter by dimension AND format type (HTML5 vs static)
+      const matchingFiles = appState.uploadedFiles.filter(f => {
+        if (f.dimensions !== dimension) return false;
+
+        // If requirement is HTML5-only, accept only HTML5 files
+        if (requirement.isHTML5 && !f.isHTML5) return false;
+
+        // If requirement is static-only, accept only non-HTML5 files
+        if (requirement.isStatic && f.isHTML5) return false;
+
+        return true;
+      });
 
       if (matchingFiles.length > 0) {
         // Found files with this dimension
@@ -2849,7 +2878,7 @@ function buildNetworkTierSection(network, tier, selection, campaignName, content
                   <th style="width: 180px;">Název banneru</th>
                   <th style="width: 100px;">Rozměr</th>
                   <th style="width: 120px;">Formát</th>
-                  <th style="width: 120px;">Služba</th>
+                  <th style="width: 120px;">Umístění</th>
                   <th style="width: 120px;">Ukotvení</th>
                   <th>Finální URL</th>
                   <th style="width: 80px;">Akce</th>
@@ -2858,8 +2887,49 @@ function buildNetworkTierSection(network, tier, selection, campaignName, content
               <tbody>
                 ${eligibleFiles.map((f, idx) => {
                   const fileId = `${network}_${tier}_${idx}`;
-                  const defaultFormat = 'banner';
+
+                  // Auto-detect format based on file.detectedFormat
+                  let defaultFormat = 'banner';
+                  if (f.file.detectedFormat) {
+                    const df = f.file.detectedFormat;
+                    if (df === 'kombi') defaultFormat = 'kombi';
+                    else if (df === 'branding' || df === 'branding-scratcher' || df === 'branding-uncover') defaultFormat = 'branding';
+                    else if (df === 'interscroller' || df === 'mobilni-interscroller') defaultFormat = 'interscroller';
+                    else if (df === 'spincube') defaultFormat = 'spincube';
+                    else if (df === 'spinner') defaultFormat = 'spinner';
+                    else if (df === 'inarticle') defaultFormat = 'in-article';
+                  }
+
                   const defaultService = 'hp';
+
+                  // Build format dropdown options based on network
+                  let formatOptions = '';
+                  if (network === 'SOS') {
+                    // SOS: rich media formats only
+                    formatOptions = `
+                      <option value="in-article">In-article</option>
+                      <option value="branding">Branding</option>
+                      <option value="branding-videopanel">Branding-videopanel</option>
+                      <option value="uncover">Uncover</option>
+                      <option value="scratcher">Scratcher</option>
+                      <option value="interscroller">Interscroller</option>
+                      <option value="spincube">Spincube</option>
+                      <option value="spinner">Spinner</option>
+                      <option value="mobilni-interactive">Mobilní-interactive</option>
+                    `;
+                  } else if (network === 'ADFORM') {
+                    // ADFORM: only banner
+                    formatOptions = '<option value="banner">Banner</option>';
+                  } else {
+                    // Others: banner, kombi, etc.
+                    formatOptions = `
+                      <option value="banner">Banner</option>
+                      <option value="kombi">Kombi</option>
+                    `;
+                  }
+
+                  // Mark selected format
+                  formatOptions = formatOptions.replace(`value="${defaultFormat}"`, `value="${defaultFormat}" selected`);
 
                   // Generate URL with current values
                   const generatedURL = generateBannerURL({
@@ -2886,52 +2956,23 @@ function buildNetworkTierSection(network, tier, selection, campaignName, content
                       <td>${f.file.dimensions}</td>
                       <td>
                         <select id="format_${fileId}" onchange="updateBannerURL('${fileId}', '${network}', '${tier}', ${idx})" style="width: 100%; padding: 4px; font-size: 12px;">
-                          <option value="banner" selected>Banner</option>
-                          <option value="kombi">Kombi</option>
+                          ${formatOptions}
                         </select>
                       </td>
                       <td>
-                        <select id="service_${fileId}" onchange="updateBannerURL('${fileId}', '${network}', '${tier}', ${idx})" style="width: 100%; padding: 4px; font-size: 12px;">
+                        <select id="service_${fileId}" onchange="handleServiceChange('${fileId}', '${network}', '${tier}', ${idx})" style="width: 100%; padding: 4px; font-size: 12px;">
+                          <option value="">-- žádné --</option>
                           <option value="hp" selected>HP</option>
-                          <option value="vyhledavani">Vyhledávání</option>
-                          <option value="email">Email</option>
-                          <option value="mapy">Mapy</option>
-                          <option value="zbozi">Zboží</option>
-                          <option value="sreality">SReality</option>
-                          <option value="sauto">SAutoSalon</option>
-                          <option value="firmy">Firmy</option>
-                          <option value="televizeseznam">Televize Seznam</option>
-                          <option value="stream">Stream</option>
-                          <option value="seznamzpravy">Seznam Zprávy</option>
-                          <option value="novinky">Novinky</option>
-                          <option value="sport">Sport</option>
-                          <option value="super">Super</option>
-                          <option value="seznamnative">Seznam Native</option>
                           <option value="obsah">Obsah</option>
+                          <option value="sport">Sport</option>
                           <option value="zpravy">Zprávy</option>
+                          <option value="novinky">Novinky</option>
                           <option value="prozeny">Pro ženy</option>
+                          <option value="super">Super</option>
                           <option value="garaz">Garáž</option>
-                          <option value="prohlizec">Prohlížeč</option>
-                          <option value="expresfm">Expres FM</option>
-                          <option value="classicpraha">Classic Praha</option>
-                          <option value="seznammenu">Seznam Menu</option>
-                          <option value="seznamaudio">Seznam Audio</option>
-                          <option value="iptv">IPTV</option>
-                          <option value="seznammedium">Seznam Medium</option>
-                          <option value="blog">Blog</option>
-                          <option value="seznammarketplace">Seznam Marketplace</option>
-                          <option value="horoskopy">Horoskopy</option>
-                          <option value="csr">CSR</option>
-                          <option value="hrm">HRM</option>
-                          <option value="seznampartner">Seznam Partner</option>
-                          <option value="sklik">Sklik</option>
-                          <option value="obchod">Obchod</option>
-                          <option value="rtb">RTB</option>
-                          <option value="pravo">Právo</option>
-                          <option value="seznamidentita">Seznam Identita</option>
-                          <option value="seznambezreklam">Seznam bez reklam</option>
-                          <option value="seznaminternational">Seznam International</option>
+                          <option value="_custom_">Vlastní...</option>
                         </select>
+                        <input type="text" id="service_custom_${fileId}" placeholder="Zadejte vlastní umístění" onchange="updateBannerURL('${fileId}', '${network}', '${tier}', ${idx})" style="display: none; margin-top: 4px; width: 100%; padding: 4px; font-size: 12px; border: 1px solid #d1d5db; border-radius: 3px;">
                       </td>
                       <td>
                         <input type="text" id="anchor_${fileId}" onchange="updateBannerURL('${fileId}', '${network}', '${tier}', ${idx})" placeholder="např. at-ziji-duchove" style="width: 100%; padding: 4px; font-size: 12px;">
@@ -3004,13 +3045,39 @@ function displayExportSettings() {
 /**
  * Update banner URL when format, service, or anchor changes
  */
+/**
+ * Handle service dropdown change - show/hide custom input
+ */
+function handleServiceChange(fileId, network, tier, fileIndex) {
+  const serviceSelect = document.getElementById(`service_${fileId}`);
+  const customInput = document.getElementById(`service_custom_${fileId}`);
+
+  if (serviceSelect.value === '_custom_') {
+    customInput.style.display = 'block';
+    customInput.focus();
+  } else {
+    customInput.style.display = 'none';
+    customInput.value = '';
+  }
+
+  // Update URL
+  updateBannerURL(fileId, network, tier, fileIndex);
+}
+
 function updateBannerURL(fileId, network, tier, fileIndex) {
   const formatSelect = document.getElementById(`format_${fileId}`);
   const serviceSelect = document.getElementById(`service_${fileId}`);
+  const serviceCustomInput = document.getElementById(`service_custom_${fileId}`);
   const anchorInput = document.getElementById(`anchor_${fileId}`);
   const urlDiv = document.getElementById(`url_${fileId}`);
 
   if (!formatSelect || !serviceSelect || !urlDiv) return;
+
+  // Get service value - use custom if selected
+  let serviceValue = serviceSelect.value;
+  if (serviceValue === '_custom_' && serviceCustomInput) {
+    serviceValue = serviceCustomInput.value.trim();
+  }
 
   // Get eligible files for this network/tier
   const eligibleFiles = [];
@@ -3038,8 +3105,8 @@ function updateBannerURL(fileId, network, tier, fileIndex) {
     landingURL: appState.landingURL,
     dimensions: fileData.file.dimensions,
     format: formatSelect.value,
-    service: serviceSelect.value,
-    anchor: anchorInput.value,
+    service: serviceValue,
+    anchor: anchorInput ? anchorInput.value : '',
     isZbozi: appState.isZboziCampaign
   });
 

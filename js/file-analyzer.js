@@ -303,6 +303,16 @@ function detectFormatFromName(filename, folderPath = '') {
     };
   }
 
+  // UAC (Universal App Campaigns) detection
+  if (searchText.includes('uac') || searchText.includes('google-ads') || searchText.includes('googleads')) {
+    return {
+      detectedFormat: 'uac',
+      detectedSystem: 'GOOGLE_ADS',
+      confidence: 'high',
+      isSocialMedia: false
+    };
+  }
+
   // No specific format detected from name
   return {
     detectedFormat: null,
@@ -406,6 +416,16 @@ async function analyzeFile(file, folderPath = '') {
       analysis.width = dims.width;
       analysis.height = dims.height;
       analysis.dimensions = `${dims.width}x${dims.height}`;
+
+      // UAC (Universal App Campaigns) dimension-based detection
+      // If dimensions match UAC formats and no other format detected, mark as UAC
+      const uacDimensions = ['1200x1200', '1200x1500', '1200x628'];
+      if (uacDimensions.includes(analysis.dimensions) && !analysis.detectedFormat) {
+        analysis.detectedFormat = 'uac';
+        analysis.detectedSystem = 'GOOGLE_ADS';
+        analysis.formatConfidence = 'medium';
+        analysis.formatSource = 'dimension';
+      }
 
       // Check color space for images
       const colorSpaceInfo = await checkColorSpace(file);

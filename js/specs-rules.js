@@ -69,62 +69,9 @@ const CREATIVE_SPECS = {
   // SOS SPECIFICATIONS (HIGH tier ONLY - no LOW tier)
   // =============================================================================
   SOS: {
-    'sponzor-sluzby': {
-      name: 'Sponzor služby',
-      dimensions: ['300x250'],
-      maxSize: 100, // KB for images
-      formats: ['jpg', 'png', 'gif'],
-      device: 'Desktop/Mobil',
-      tier: ['HIGH']
-    },
-    'mobilni-square': {
-      name: 'Mobilní square',
-      dimensions: ['300x300'],
-      maxSize: 100,
-      formats: ['jpg', 'png', 'gif'],
-      device: 'Mobil',
-      tier: ['HIGH']
-    },
-    'skyscraper': {
-      name: 'Skyscraper',
-      dimensions: ['300x600'],
-      maxSize: 100,
-      formats: ['jpg', 'png', 'gif'],
-      device: 'Desktop',
-      tier: ['HIGH']
-    },
-    'wallpaper': {
-      name: 'Wallpaper/Produktová plachta',
-      dimensions: ['480x300'],
-      maxSize: 100,
-      formats: ['jpg', 'png', 'gif'],
-      device: 'Desktop/Mobil',
-      tier: ['HIGH']
-    },
-    'mobilni-square-premium': {
-      name: 'Mobilní square premium / Mobilní square',
-      dimensions: ['480x480', '300x300'],
-      maxSize: 100,
-      formats: ['jpg', 'png', 'gif'],
-      device: 'Mobil',
-      tier: ['HIGH']
-    },
-    'leaderboard': {
-      name: 'Leaderboard',
-      dimensions: ['970x210'],
-      maxSize: 100,
-      formats: ['jpg', 'png', 'gif'],
-      device: 'Desktop',
-      tier: ['HIGH']
-    },
-    'rectangle': {
-      name: 'Rectangle',
-      dimensions: ['970x310'],
-      maxSize: 100,
-      formats: ['jpg', 'png', 'gif'],
-      device: 'Desktop',
-      tier: ['HIGH']
-    },
+    // SOS accepts ONLY rich media and in-article formats
+    // Standard banners (300x250, 300x300, 300x600, etc.) are NOT supported on SOS
+    // Use ADFORM, ONEGAR, or SKLIK for standard banner placements
     'branding': {
       name: 'Branding',
       dimensions: ['2560x1440'],
@@ -277,6 +224,15 @@ const CREATIVE_SPECS = {
       formats: ['jpg', 'png', 'gif'],
       device: 'Mobil',
       tier: ['HIGH', 'LOW']
+    },
+    'kombi': {
+      name: 'Nativní inzerát / Kombi',
+      dimensions: ['1200x628', '1200x1200', '600x314', '300x300'],
+      maxSize: 1024, // 1 MB
+      formats: ['jpg', 'png', 'gif', 'webp', 'avif'],
+      device: 'Desktop/Mobil',
+      tier: ['HIGH', 'LOW'],
+      notes: 'Banner bez textu (pro nativ). Min: 600×314 (rect) / 300×300 (square). Recommended: 1200×628 / 1200×1200.'
     }
   },
 
@@ -523,6 +479,31 @@ const CREATIVE_SPECS = {
       maxSize: 150,
       formats: ['jpg', 'png', 'gif'],
       device: 'Mobil'
+    },
+    // UAC (Universal App Campaigns) formats
+    'uac-square': {
+      name: 'UAC Square (1:1)',
+      dimensions: ['1200x1200'],
+      maxSize: 5120, // 5 MB
+      formats: ['jpg', 'png'],
+      device: 'Desktop/Mobil',
+      notes: 'Universal App Campaign - Square format for app promotion'
+    },
+    'uac-portrait': {
+      name: 'UAC Portrait (4:5)',
+      dimensions: ['1200x1500'],
+      maxSize: 5120, // 5 MB
+      formats: ['jpg', 'png'],
+      device: 'Desktop/Mobil',
+      notes: 'Universal App Campaign - Portrait format for app promotion'
+    },
+    'uac-landscape': {
+      name: 'UAC Landscape (1.91:1)',
+      dimensions: ['1200x628'],
+      maxSize: 5120, // 5 MB
+      formats: ['jpg', 'png'],
+      device: 'Desktop/Mobil',
+      notes: 'Universal App Campaign - Landscape format for app promotion'
     }
   }
 };
@@ -552,17 +533,18 @@ const FORMAT_SYSTEM_MAPPING = {
   // Kombi - ONEGAR and SKLIK
   'kombi': ['ONEGAR', 'SKLIK'],
 
-  // Standard banners - can be deployed to ADFORM, SOS, ONEGAR, SKLIK
-  'sponzor-sluzby': ['ADFORM', 'SOS', 'ONEGAR', 'SKLIK'],
-  'mobilni-square': ['ADFORM', 'SOS', 'ONEGAR', 'SKLIK'],
-  'mobilni-square-premium': ['ADFORM', 'SOS', 'ONEGAR', 'SKLIK'],
-  'skyscraper': ['ADFORM', 'SOS', 'ONEGAR', 'SKLIK'],
+  // Standard banners - can be deployed to ADFORM, ONEGAR, SKLIK (NOT SOS!)
+  // SOS accepts only rich media and in-article formats
+  'sponzor-sluzby': ['ADFORM', 'ONEGAR', 'SKLIK'],
+  'mobilni-square': ['ADFORM', 'ONEGAR', 'SKLIK'],
+  'mobilni-square-premium': ['ADFORM', 'ONEGAR', 'SKLIK'],
+  'skyscraper': ['ADFORM', 'ONEGAR', 'SKLIK'],
   'skyscraper-sticky': ['SKLIK'],
-  'wallpaper': ['ADFORM', 'SOS', 'ONEGAR', 'SKLIK'],
-  'leaderboard': ['ADFORM', 'SOS', 'ONEGAR', 'SKLIK'],
+  'wallpaper': ['ADFORM', 'ONEGAR', 'SKLIK'],
+  'leaderboard': ['ADFORM', 'ONEGAR', 'SKLIK'],
   'leaderboard-middle': ['SKLIK'],
   'mobilni-leaderboard': ['SKLIK'],
-  'rectangle': ['ADFORM', 'SOS', 'ONEGAR', 'SKLIK'],
+  'rectangle': ['ADFORM', 'ONEGAR', 'SKLIK'],
 
   // HTML5 banners - ADFORM, ONEGAR, SKLIK (NOT SOS for most)
   'html5-banner': ['ADFORM', 'ONEGAR', 'SKLIK'],
@@ -574,6 +556,12 @@ const FORMAT_SYSTEM_MAPPING = {
   'exclusive-mobile-square': ['HP_EXCLUSIVE'],
   'exclusive-app-wallpaper': ['HP_EXCLUSIVE'],
   'exclusive-app-square': ['HP_EXCLUSIVE'],
+
+  // UAC (Universal App Campaigns) - GOOGLE_ADS only
+  'uac': ['GOOGLE_ADS'],
+  'uac-square': ['GOOGLE_ADS'],
+  'uac-portrait': ['GOOGLE_ADS'],
+  'uac-landscape': ['GOOGLE_ADS'],
 
   // Social media - NOT for any ad system (handled separately)
   'social-media': []
@@ -700,10 +688,34 @@ function findMatchingFormats(fileData, network = null, tier = null) {
   const matches = [];
   const searchNetworks = network ? [network] : Object.keys(CREATIVE_SPECS);
 
-  for (const netName of searchNetworks) {
+  // Filter networks based on detected format (if any)
+  // This ensures format-specific files (e.g., spincube, spinner) only match their allowed systems
+  let filteredNetworks = searchNetworks;
+  if (fileData.detectedFormat) {
+    const allowedSystems = getAllowedSystemsForFormat(fileData.detectedFormat);
+    filteredNetworks = searchNetworks.filter(net => allowedSystems.includes(net));
+  }
+
+  for (const netName of filteredNetworks) {
     const networkSpecs = CREATIVE_SPECS[netName];
 
     for (const [specKey, spec] of Object.entries(networkSpecs)) {
+      // If detected format exists and is not 'html5-banner', match only that specific specKey
+      // This prevents rich media formats (spincube, spinner, branding-scratcher) from matching wrong specs
+      // For UAC: if detectedFormat is 'uac', match any specKey starting with 'uac-'
+      if (fileData.detectedFormat &&
+          fileData.detectedFormat !== 'html5-banner' &&
+          specKey !== fileData.detectedFormat &&
+          !(fileData.detectedFormat === 'uac' && specKey.startsWith('uac-'))) {
+        continue;
+      }
+
+      // If file is HTML5 ZIP, match only HTML5-compatible specs
+      // This prevents HTML5 banners from being matched against static image specs
+      if (fileData.isHTML5 && !spec.formats.includes('html5')) {
+        continue;
+      }
+
       // Check if tier matches (if specified)
       if (tier && spec.tier && !spec.tier.includes(tier)) continue;
 
@@ -811,7 +823,14 @@ function detectMultiFileFormats(allFiles) {
   const multiFileGroups = [];
 
   // Check for Branding Uncover (2x 2560x1440)
-  const uncoverFiles = allFiles.filter(f => f.dimensions === '2560x1440');
+  // Only match files with "uncover" in name or folder to avoid mixing with branding-scratcher
+  const uncoverFiles = allFiles.filter(f => {
+    if (f.dimensions !== '2560x1440') return false;
+    const fileName = (f.name || '').toLowerCase();
+    const folderPath = (f.folderPath || '').toLowerCase();
+    return fileName.includes('uncover') || folderPath.includes('uncover');
+  });
+
   if (uncoverFiles.length >= 2) {
     // Group in pairs
     for (let i = 0; i < uncoverFiles.length - 1; i += 2) {
@@ -887,42 +906,9 @@ function detectMultiFileFormats(allFiles) {
     }
   }
 
-  // Process ungrouped 480x480 files (fallback to old logic)
-  if (ungroupedSpincube.length >= 4) {
-    // Group in sets of 4
-    for (let i = 0; i < Math.floor(ungroupedSpincube.length / 4) * 4; i += 4) {
-      multiFileGroups.push({
-        format: 'spincube',
-        network: 'SOS',
-        files: ungroupedSpincube.slice(i, i + 4),
-        complete: true,
-        requiredCount: 4,
-        roles: ['banner', 'banner', 'banner', 'banner']
-      });
-    }
-    // If remaining files (less than 4), incomplete
-    const remaining = ungroupedSpincube.length % 4;
-    if (remaining > 0) {
-      multiFileGroups.push({
-        format: 'spincube',
-        network: 'SOS',
-        files: ungroupedSpincube.slice(-remaining),
-        complete: false,
-        requiredCount: 4,
-        roles: ['banner', 'banner', 'banner', 'banner']
-      });
-    }
-  } else if (ungroupedSpincube.length > 0) {
-    // Less than 4 files, incomplete
-    multiFileGroups.push({
-      format: 'spincube',
-      network: 'SOS',
-      files: ungroupedSpincube,
-      complete: false,
-      requiredCount: 4,
-      roles: ['banner', 'banner', 'banner', 'banner']
-    });
-  }
+  // DO NOT process ungrouped 480x480 files as Spincube
+  // Only files with "spincube" in name/folder are considered Spincube format
+  // This prevents regular 480x480 banners from being incorrectly matched as Spincube
 
   // Check for Spinner (4x 300x600)
   // First, identify Spinner files by name/folder containing "spinner"

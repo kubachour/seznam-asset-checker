@@ -16,9 +16,8 @@
       <div class="step active clickable" data-step="1" onclick="handleStepClick(1)">1. Nahrát bannery</div>
       <div class="step clickable" data-step="2" onclick="handleStepClick(2)">2. Validace podle tabulky</div>
       <div class="step clickable" data-step="3" onclick="handleStepClick(3)">3. Validace pro systémy</div>
-      <div class="step clickable" data-step="4" onclick="handleStepClick(4)">4. Nastavení exportu</div>
-      <div class="step clickable" data-step="5" onclick="handleStepClick(5)">5. Vybrat systémy</div>
-      <div class="step clickable" data-step="6" onclick="handleStepClick(6)">6. Export</div>
+      <div class="step clickable" data-step="4" onclick="handleStepClick(4)">4. Vybrat systémy</div>
+      <div class="step clickable" data-step="5" onclick="handleStepClick(5)">5. Export</div>
     </div>
 
     <!-- Step 1: Upload Banners -->
@@ -158,107 +157,21 @@
     </div>
 
     <!-- Step 4: Export Settings -->
-    <div class="section" id="step4" data-step-name="export-settings">
-      <h2 class="step-heading">Nastavení exportu</h2>
-      <p class="subtitle">Nastavte globální parametry pro export. Jednotlivé bannery můžete upravit v kroku 5.</p>
-
-      <!-- Campaign Table Data Info -->
-      <div id="tableDataInfo" style="display: none;"></div>
-
-      <!-- Campaign Settings -->
-      <div class="campaign-settings-form" style="margin: 20px 0;">
-        <div class="form-group">
-          <label for="campaignName">Název kampaně:</label>
-          <input type="text" id="campaignName" placeholder="např. sluzba-nazev-kampane" oninput="updateExportPreview()" />
-        </div>
-
-        <!-- Multiple Content Variants -->
-        <div class="form-group">
-          <label>Content varianty:</label>
-          <div class="helper-text" style="margin-bottom: 10px;">Přidejte různé varianty contentu (např. "nuzky-a", "nuzky-b"). Pro každou variantu se vygeneruje samostatný export.</div>
-          <div id="contentVariantsList">
-            <div class="content-variant-row" style="display: flex; gap: 10px; margin-bottom: 8px; align-items: center;">
-              <input type="text" class="content-variant-input" placeholder="např. content" oninput="updateExportPreview()" style="flex: 1;" />
-              <button type="button" class="btn-remove-variant" onclick="removeContentVariant(this)" style="background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 14px; display: none;">✕</button>
-            </div>
-          </div>
-          <button type="button" class="btn-add-variant" onclick="addContentVariant()" style="background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; margin-top: 8px;">+ Přidat variantu</button>
-        </div>
-
-        <div class="form-group">
-          <label for="placement">Umístění (volitelné):</label>
-          <select id="placement" onchange="handlePlacementChange()" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 4px;">
-            <option value="">-- Vyberte umístění --</option>
-            <option value="hp">hp</option>
-            <option value="obsah">obsah</option>
-            <option value="sport">sport</option>
-            <option value="zpravy">zpravy</option>
-            <option value="custom">Vlastní...</option>
-          </select>
-          <input type="text" id="placementCustom" placeholder="Zadejte vlastní umístění" oninput="updateExportPreview()" style="display: none; margin-top: 8px; width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 4px;" />
-          <div class="helper-text">Použije se v utm_content a utm_term (např. hp, obsah, sport, zpravy)</div>
-        </div>
-
-        <div class="form-group">
-          <label for="landingURL">Landing page URL:</label>
-          <input type="text" id="landingURL" value="https://" placeholder="https://www.seznam.cz/nekonecny" oninput="updateExportPreview()" />
-        </div>
-
-        <!-- Zbozi.cz Toggle -->
-        <div class="form-group">
-          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-            <input type="checkbox" id="zboziToggle" onchange="updateExportPreview()" style="width: 20px; height: 20px;">
-            <span style="font-weight: 600;">Kampaň pro Zboží.cz</span>
-          </label>
-          <div class="helper-text">Uplatnit speciální pravidla pro kampaně na Zboží.cz</div>
-        </div>
-
-        <!-- Date Range Fields (only visible when zbozi is enabled) -->
-        <div id="zboziDateFields" style="display: none; margin-top: 15px;">
-          <div class="form-group">
-            <label for="campaignStartDate">Datum začátku kampaně:</label>
-            <input type="date" id="campaignStartDate" oninput="updateExportPreview()" />
-          </div>
-
-          <div class="form-group">
-            <label for="campaignEndDate">Datum konce kampaně:</label>
-            <input type="date" id="campaignEndDate" oninput="updateExportPreview()" />
-          </div>
-        </div>
-      </div>
-
-      <!-- URL Preview -->
-      <div id="urlPreview" class="url-preview-panel" style="margin: 20px 0; padding: 15px; background: #f9fafb; border-radius: 6px; border: 1px solid #e5e7eb;">
-        <strong style="display: block; margin-bottom: 10px; color: #1f2937;">Náhled URL:</strong>
-        <div id="urlPreviewContent" style="font-size: 13px; color: #6b7280; font-family: monospace; word-break: break-all;">
-          Vyplňte údaje pro zobrazení náhledu URL
-        </div>
-        <div class="preview-hint" style="margin-top: 10px; font-size: 12px; color: #6b7280; font-style: italic;">
-          💡 Můžete upravit formát, službu a ukotvení pro každý banner v kroku 5
-        </div>
-      </div>
-
-      <div class="nav-buttons">
-        <button class="btn-secondary" onclick="goToStep(3)">← Zpět</button>
-        <button class="btn-primary" onclick="goToStep(5)">Další: Výběr systémů →</button>
-      </div>
-    </div>
-
-    <!-- Step 5: Select Networks -->
-    <div class="section" id="step5" data-step-name="network-selection">
+    <!-- Step 4: Select Networks (formerly Step 5) -->
+    <div class="section" id="step4" data-step-name="network-selection">
       <h2 class="step-heading">Výběr systémů</h2>
       <p class="subtitle">Vyber prosím systém pro přejmenování bannerů a export URL.</p>
 
       <div id="networkSelection" class="network-selection-container"></div>
 
       <div class="nav-buttons">
-        <button class="btn-secondary" onclick="goToStep(4)">← Zpět</button>
-        <button class="btn-primary" id="exportBtn" onclick="goToStep(6)">Další: Export →</button>
+        <button class="btn-secondary" onclick="goToStep(3)">← Zpět</button>
+        <button class="btn-primary" id="exportBtn" onclick="goToStep(5)">Další: Export →</button>
       </div>
     </div>
 
-    <!-- Step 6: Export -->
-    <div class="section" id="step6" data-step-name="export">
+    <!-- Step 5: Export (formerly Step 6) -->
+    <div class="section" id="step5" data-step-name="export">
       <h2 class="step-heading">Export bannerů</h2>
 
       <!-- Export Options Per Network -->

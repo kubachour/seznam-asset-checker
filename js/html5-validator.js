@@ -35,9 +35,10 @@
    * @returns {boolean} True if matches HTML5 pattern
    */
   function isHTML5BannerByName(fileName) {
-    // Pattern: HTML5_WIDTHxHEIGHT_name.zip or contains "html5" in name
+    // Pattern: Must contain "html5" and be a ZIP file
+    // Matches: "HTML5_970x210_leaderboard.zip", "2511-HTML5-Zimni-kampan-300x250-V2.zip", etc.
     const nameLower = fileName.toLowerCase();
-    return nameLower.includes('html5') || /html5_\d+x\d+_.*\.zip/i.test(fileName);
+    return nameLower.includes('html5') && fileName.endsWith('.zip');
   }
 
   /**
