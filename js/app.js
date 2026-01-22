@@ -5,7 +5,7 @@
 // GLOBAL STATE
 // =============================================================================
 
-const APP_VERSION = 'v1.3.0'; // Major update: Format detection fixes and workflow improvements
+const APP_VERSION = 'v1.3.1'; // UX improvements: ZIP file icons, folder organization, and CMYK warning fixes
 
 const appState = {
   currentStep: 1,
@@ -1650,6 +1650,50 @@ async function handleFileUpload(files) {
   }
 }
 
+/**
+ * Group files by their folder structure
+ * @param {Array} files - Array of file objects
+ * @returns {Object} Grouped files by folder path
+ */
+function groupFilesByFolder(files) {
+  const grouped = {};
+
+  files.forEach((file, index) => {
+    const folderPath = file.folderPath || '';
+    if (!grouped[folderPath]) {
+      grouped[folderPath] = [];
+    }
+    grouped[folderPath].push({ file, index });
+  });
+
+  return grouped;
+}
+
+/**
+ * Generate thumbnail HTML for a file
+ * @param {Object} file - File object
+ * @returns {string} HTML string for thumbnail
+ */
+function generateThumbnailHTML(file) {
+  if (file.fileType === 'zip' || file.fileType === 'html5' || file.isHTML5) {
+    // Show ZIP icon for ZIP and HTML5 files
+    return `
+      <div class="file-thumbnail-placeholder" style="width: 40px; height: 40px; background: #dbeafe; border-radius: 4px; border: 1px solid #93c5fd; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 20px;">🗜️</div>
+    `;
+  } else if (file.fileType === 'image' && file.preview) {
+    // Show image thumbnail for images
+    return `
+      <img class="file-thumbnail" src="${file.preview}" alt="${file.name}"
+        style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid #e5e7eb; flex-shrink: 0;">
+    `;
+  } else {
+    // Generic file icon for other files
+    return `
+      <div class="file-thumbnail-placeholder" style="width: 40px; height: 40px; background: #f3f4f6; border-radius: 4px; border: 1px solid #e5e7eb; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 18px;">📄</div>
+    `;
+  }
+}
+
 function displayUploadedFiles() {
   const uploadedFilesSection = document.getElementById('uploadedFiles');
   if (!uploadedFilesSection) return;
@@ -1659,39 +1703,113 @@ function displayUploadedFiles() {
     return;
   }
 
+  // Group files by folder
+  const groupedFiles = groupFilesByFolder(appState.uploadedFiles);
+  const sortedFolders = Object.keys(groupedFiles).sort();
+
+  // Separate root files from folder files
+  const rootFiles = groupedFiles[''] || [];
+  const folderPaths = sortedFolders.filter(path => path !== '');
+
+  let foldersHTML = '';
+
+  // Display files organized by folders
+  if (folderPaths.length > 0) {
+    foldersHTML = folderPaths.map(folderPath => {
+      const filesInFolder = groupedFiles[folderPath];
+      const folderName = folderPath.split('/').pop() || folderPath;
+
+      return `
+        <div class="folder-group" style="margin-bottom: 15px; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+          <div class="folder-header" style="background: #f9fafb; padding: 10px 15px; border-bottom: 1px solid #e5e7eb; cursor: pointer; display: flex; align-items: center; gap: 8px; user-select: none;" onclick="toggleFolder(this)">
+            <span class="folder-toggle">▼</span>
+            <span style="font-size: 18px;">📁</span>
+            <strong>${folderName}</strong>
+            <span style="color: #6b7280; font-size: 0.9em;">(${filesInFolder.length} files)</span>
+            <span style="color: #9ca3af; font-size: 0.85em; margin-left: auto; font-family: monospace;">${folderPath}</span>
+          </div>
+          <ul class="folder-files" style="list-style: none; padding: 0; margin: 0;">
+            ${filesInFolder.map(({ file, index }) => {
+              const thumbnailHTML = generateThumbnailHTML(file);
+
+              return `
+                <li class="uploaded-file-item" style="padding: 10px 15px; border-bottom: 1px solid #f3f4f6; display: flex; justify-content: space-between; align-items: center; background: white;">
+                  <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
+                    ${thumbnailHTML}
+                    <div class="file-info">
+                      <strong class="file-name">${file.name}</strong>
+                      ${file.dimensions ? `<span class="file-dimensions" style="color: #6b7280; margin-left: 10px;">${file.dimensions}</span>` : ''}
+                      <span class="file-size" style="color: #6b7280; margin-left: 10px;">${file.sizeKB} KB</span>
+                      ${file.fileType === 'image' && !file.colorSpaceValid ? '<span class="file-warning" style="color: #ef4444; margin-left: 10px;">⚠️ CMYK</span>' : ''}
+                    </div>
+                  </div>
+                  <button class="remove-file-btn" onclick="removeFile(${index})" style="background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; flex-shrink: 0;">✕</button>
+                </li>
+              `;
+            }).join('')}
+          </ul>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Display root files (files not in any folder)
+  let rootFilesHTML = '';
+  if (rootFiles.length > 0) {
+    rootFilesHTML = `
+      <div class="root-files" style="margin-bottom: 15px;">
+        <h4 style="margin-bottom: 10px; color: #6b7280;">Root Files (${rootFiles.length})</h4>
+        <ul class="uploaded-files-list" style="list-style: none; padding: 0; margin: 0; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+          ${rootFiles.map(({ file, index }) => {
+            const thumbnailHTML = generateThumbnailHTML(file);
+
+            return `
+              <li class="uploaded-file-item" style="padding: 10px; border-bottom: 1px solid #f3f4f6; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
+                  ${thumbnailHTML}
+                  <div class="file-info">
+                    <strong class="file-name">${file.name}</strong>
+                    ${file.dimensions ? `<span class="file-dimensions" style="color: #6b7280; margin-left: 10px;">${file.dimensions}</span>` : ''}
+                    <span class="file-size" style="color: #6b7280; margin-left: 10px;">${file.sizeKB} KB</span>
+                    ${file.fileType === 'image' && !file.colorSpaceValid ? '<span class="file-warning" style="color: #ef4444; margin-left: 10px;">⚠️ CMYK</span>' : ''}
+                  </div>
+                </div>
+                <button class="remove-file-btn" onclick="removeFile(${index})" style="background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; flex-shrink: 0;">✕</button>
+              </li>
+            `;
+          }).join('')}
+        </ul>
+      </div>
+    `;
+  }
+
   const html = `
     <div class="uploaded-files-container" style="margin-top: 20px;">
       <h3>Uploaded Files (${appState.uploadedFiles.length})</h3>
-      <ul class="uploaded-files-list" style="list-style: none; padding: 0;">
-        ${appState.uploadedFiles.map((file, index) => {
-          // Generate thumbnail URL if file has preview (images only)
-          const thumbnailURL = file.preview || (file.file ? createThumbnailURL(file.file) : '');
-
-          return `
-          <li class="uploaded-file-item" style="padding: 10px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
-            <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
-              ${thumbnailURL ? `
-                <img class="file-thumbnail" src="${thumbnailURL}" alt="${file.name}"
-                  style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid #e5e7eb; flex-shrink: 0;">
-              ` : `
-                <div class="file-thumbnail-placeholder" style="width: 40px; height: 40px; background: #f3f4f6; border-radius: 4px; border: 1px solid #e5e7eb; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 18px;">📄</div>
-              `}
-              <div class="file-info">
-                <strong class="file-name">${file.name}</strong>
-                ${file.dimensions ? `<span class="file-dimensions" style="color: #6b7280; margin-left: 10px;">${file.dimensions}</span>` : ''}
-                <span class="file-size" style="color: #6b7280; margin-left: 10px;">${file.sizeKB} KB</span>
-                ${!file.colorSpaceValid ? '<span class="file-warning" style="color: #ef4444; margin-left: 10px;">⚠️ CMYK</span>' : ''}
-              </div>
-            </div>
-            <button class="remove-file-btn" onclick="removeFile(${index})" style="background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; flex-shrink: 0;">✕</button>
-          </li>
-        `;
-        }).join('')}
-      </ul>
+      ${rootFilesHTML}
+      ${foldersHTML}
     </div>
   `;
 
   uploadedFilesSection.innerHTML = html;
+}
+
+/**
+ * Toggle folder visibility
+ * @param {HTMLElement} header - Folder header element
+ */
+function toggleFolder(header) {
+  const folderGroup = header.parentElement;
+  const filesList = folderGroup.querySelector('.folder-files');
+  const toggle = header.querySelector('.folder-toggle');
+
+  if (filesList.style.display === 'none') {
+    filesList.style.display = 'block';
+    toggle.textContent = '▼';
+  } else {
+    filesList.style.display = 'none';
+    toggle.textContent = '▶';
+  }
 }
 
 function removeFile(index) {
