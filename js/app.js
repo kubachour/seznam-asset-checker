@@ -5,7 +5,7 @@
 // GLOBAL STATE
 // =============================================================================
 
-const APP_VERSION = 'v1.3.1'; // UX improvements: ZIP file icons, folder organization, and CMYK warning fixes
+const APP_VERSION = 'v1.4.0'; // Major UX improvements, URL generation fixes, export enhancements, ZIP explorer, folder context display
 
 const appState = {
   currentStep: 1,
@@ -103,10 +103,11 @@ function getNetworkTooltip(network) {
 document.addEventListener('DOMContentLoaded', () => {
   console.log('Creative Validator initialized');
 
-  // Display app version
+  // Display app version and link to GitHub release
   const versionElement = document.getElementById('appVersion');
   if (versionElement) {
     versionElement.textContent = APP_VERSION;
+    versionElement.href = `https://github.com/kubachour/seznam-asset-checker/releases/tag/${APP_VERSION}`;
   }
 
   // Load saved campaign settings
@@ -321,8 +322,8 @@ function handleStepClick(stepNumber) {
     return;
   }
 
-  // Allow navigation to previous steps or to valid next steps
-  if (stepNumber <= appState.currentStep + 1) {
+  // Allow navigation: backward to any visited step OR forward one step
+  if (stepNumber <= appState.currentStep || stepNumber === appState.currentStep + 1) {
     goToStep(stepNumber);
   }
 }
@@ -896,12 +897,18 @@ function generateBannerURL(params) {
     format,
     service,
     anchor,
-    isZbozi
+    isZbozi,
+    fileName = '',
+    placement = ''
   } = params;
 
   // Normalize campaign and content names according to Seznam tagging rules
   const normalizedCampaign = normalizeUTMText(campaignName);
   const normalizedContent = normalizeUTMText(contentName);
+
+  // Detect variant from filename (v1, v2, V1, V2, var1, var2, variant1, variant2)
+  const variantMatch = fileName.match(/[_-](v\d+|var\d+|variant\d+)/i);
+  const variant = variantMatch ? variantMatch[1].toLowerCase().replace('variant', 'var') : '';
 
   let utm_source = '';
   let utm_medium = '';
@@ -970,13 +977,20 @@ function generateBannerURL(params) {
         utm_medium = 'banner_selfpromo_high';
       }
 
-      // utm_content: normalized campaign-content_format_service
+      // utm_content: campaign-content_format[_placement][_variant]
+      // utm_term: just format name (no placement)
+      const formatName = normalizeUTMText(format);
+
       if (format === 'in-article') {
         utm_content = `${normalizedCampaign}-${normalizedContent}_${format}_${service}`;
-        utm_term = `${format}_${service}`;
+        if (placement) utm_content += `_${normalizeUTMText(placement)}`;
+        if (variant) utm_content += `_${variant}`;
+        utm_term = format;
       } else {
-        utm_content = `${normalizedCampaign}-${normalizedContent}_${dimensions}`;
-        utm_term = normalizeUTMText(format);
+        utm_content = `${normalizedCampaign}-${normalizedContent}_${formatName}`;
+        if (placement) utm_content += `_${normalizeUTMText(placement)}`;
+        if (variant) utm_content += `_${variant}`;
+        utm_term = formatName;
       }
     }
 
@@ -1022,9 +1036,13 @@ function generateBannerURL(params) {
       // Build utm_campaign with service prefix
       utm_campaign = buildUTMCampaign(service, campaignName);
 
+      const formatName = normalizeUTMText(format);
+
       if (format === 'kombi') {
         utm_medium = 'kombi_selfpromo';
         utm_content = `${normalizedCampaign}-${normalizedContent}_kombi`;
+        if (placement) utm_content += `_${normalizeUTMText(placement)}`;
+        if (variant) utm_content += `_${variant}`;
         utm_term = 'kombi';
       } else if (format === 'banner') {
         if (tier === 'HIGH') {
@@ -1032,17 +1050,21 @@ function generateBannerURL(params) {
         } else {
           utm_medium = isAdform ? 'banner_selfpromo_low_adform' : 'banner_selfpromo_low';
         }
-        utm_content = `${normalizedCampaign}-${normalizedContent}_${dimensions}`;
+        utm_content = `${normalizedCampaign}-${normalizedContent}_${formatName}`;
+        if (placement) utm_content += `_${normalizeUTMText(placement)}`;
+        if (variant) utm_content += `_${variant}`;
         utm_term = 'banner';
       } else if (format === 'video') {
         utm_medium = tier === 'HIGH' ? 'video_selfpromo_high' : 'video_selfpromo_low';
-        utm_content = `${normalizedCampaign}-${normalizedContent}_${dimensions}`;
+        utm_content = `${normalizedCampaign}-${normalizedContent}_${formatName}`;
+        if (placement) utm_content += `_${normalizeUTMText(placement)}`;
+        if (variant) utm_content += `_${variant}`;
         utm_term = 'video';
       }
     }
 
   } else if (network === 'SKLIK') {
-    utm_source = 'seznam_sklik';
+    utm_source = 'seznam';
 
     // ========== ZBOZI CAMPAIGN LOGIC ==========
     if (isZbozi) {
@@ -1071,16 +1093,28 @@ function generateBannerURL(params) {
     }
     // ========== REGULAR SKLIK LOGIC ==========
     else {
-      utm_medium = 'cpc_low';
-      // SKLIK uses autotagging - keep {campaign} and {adtitle} placeholders (Rule 5 exception)
-      utm_campaign = '{campaign}';
-      utm_content = '{adgroup}_{adtitle}';
+      utm_medium = 'cpc';
+
+      // Determine format type: kombi vs banner
+      const isKombi = format.includes('kombi') || format.includes('nativni');
+      const formatType = isKombi ? 'kombi' : 'banner';
+      const formatName = normalizeUTMText(format);
+
+      // Build campaign name: display_{campaignName}_banner or display_{campaignName}_kombi
+      utm_campaign = `display_${normalizedCampaign}_${formatType}`;
+
+      // Build utm_content: format[_placement][_variant]
+      utm_content = formatName;
+      if (placement) utm_content += `_${normalizeUTMText(placement)}`;
+      if (variant) utm_content += `_${variant}`;
+
       utm_term = '';
     }
 
   } else if (network === 'ADFORM' || network === 'HP_EXCLUSIVE') {
     // Set utm_source based on network
-    utm_source = network === 'HP_EXCLUSIVE' ? 'homepage_exclusive' : 'seznam_adform';
+    // ADFORM routes through ONEGAR, so uses 'seznam_onegar' source
+    utm_source = network === 'HP_EXCLUSIVE' ? 'homepage_exclusive' : 'seznam_onegar';
 
     // ========== ZBOZI CAMPAIGN LOGIC ==========
     if (isZbozi) {
@@ -1118,8 +1152,11 @@ function generateBannerURL(params) {
       // Build utm_campaign with service prefix
       utm_campaign = buildUTMCampaign(service, campaignName);
 
+      const formatName = normalizeUTMText(format);
       utm_medium = tier === 'HIGH' ? 'banner_selfpromo_high_adform' : 'banner_selfpromo_low_adform';
-      utm_content = `${normalizedCampaign}-${normalizedContent}_${dimensions}`;
+      utm_content = `${normalizedCampaign}-${normalizedContent}_${formatName}`;
+      if (placement) utm_content += `_${normalizeUTMText(placement)}`;
+      if (variant) utm_content += `_${variant}`;
       utm_term = 'banner';
     }
   }
@@ -1239,6 +1276,8 @@ function parseCampaignTableText(text) {
     }) : [];
 
     // Extract size in KB (supports "150 kb", "150KB", "1 MB" => 1024KB)
+    // If size column contains non-size text (e.g., "info", "tbd", "N/A"), regex won't match
+    // and maxSizeKB will remain null, skipping size validation for that row
     let maxSizeKB = null;
     if (sizeText) {
       const sizeMatch = sizeText.match(/([\d.]+)\s*(kb|mb|gb)/i);
@@ -1253,6 +1292,8 @@ function parseCampaignTableText(text) {
           maxSizeKB = Math.round(value);
         }
       }
+      // If no match found (non-standard text in size column), maxSizeKB stays null
+      // This is intentional - allows flexible table formats without breaking parsing
     }
 
     // If name exists and is not just a dimension, start new requirement
@@ -1479,12 +1520,14 @@ function toggleTableInput() {
  * @returns {Promise<Array>} Array of extracted files
  */
 async function extractImagesFromZIP(zipFile, depth = 0, parentPath = '') {
-  // Limit recursion depth to prevent infinite loops
-  const MAX_DEPTH = 2;
+  // Limit recursion depth to prevent infinite loops (allows up to 4 levels: 0, 1, 2, 3)
+  const MAX_DEPTH = 3;
   if (depth > MAX_DEPTH) {
-    console.warn(`Max ZIP nesting depth (${MAX_DEPTH}) reached, skipping deeper extraction`);
+    console.warn(`Max ZIP nesting depth (${MAX_DEPTH}) reached at ${parentPath || 'root'}, skipping deeper extraction`);
     return [];
   }
+
+  console.log(`Extracting ZIP at depth ${depth}, path: ${parentPath || 'root'}`);
 
   try {
     const zip = new JSZip();
@@ -1494,6 +1537,9 @@ async function extractImagesFromZIP(zipFile, depth = 0, parentPath = '') {
     for (const [filename, zipEntry] of Object.entries(contents.files)) {
       // Skip directories and hidden files
       if (zipEntry.dir || filename.startsWith('__MACOSX') || filename.startsWith('.')) {
+        if (zipEntry.dir) {
+          console.log(`Skipping directory: ${filename}`);
+        }
         continue;
       }
 
@@ -1539,9 +1585,15 @@ async function extractImagesFromZIP(zipFile, depth = 0, parentPath = '') {
         file.folderPath = folderPath;
 
         imageFiles.push(file);
+        console.log(`Extracted image: ${baseName} from ${folderPath || 'root'}`);
+      }
+      else {
+        // Skip non-image files
+        console.log(`Skipping non-image file: ${filename}`);
       }
     }
 
+    console.log(`Total images extracted at depth ${depth}: ${imageFiles.length}`);
     return imageFiles;
   } catch (error) {
     console.error('Error extracting ZIP file:', error);
@@ -1672,24 +1724,28 @@ function groupFilesByFolder(files) {
 /**
  * Generate thumbnail HTML for a file
  * @param {Object} file - File object
+ * @param {number} size - Thumbnail size in pixels (default: 40)
  * @returns {string} HTML string for thumbnail
  */
-function generateThumbnailHTML(file) {
+function generateThumbnailHTML(file, size = 40) {
+  const iconSize = Math.floor(size / 2);
+  const genericIconSize = Math.floor(size * 0.45);
+
   if (file.fileType === 'zip' || file.fileType === 'html5' || file.isHTML5) {
     // Show ZIP icon for ZIP and HTML5 files
     return `
-      <div class="file-thumbnail-placeholder" style="width: 40px; height: 40px; background: #dbeafe; border-radius: 4px; border: 1px solid #93c5fd; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 20px;">🗜️</div>
+      <div class="file-thumbnail-placeholder" style="width: ${size}px; height: ${size}px; background: #dbeafe; border-radius: 4px; border: 1px solid #93c5fd; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: ${iconSize}px;">🗜️</div>
     `;
   } else if (file.fileType === 'image' && file.preview) {
     // Show image thumbnail for images
     return `
       <img class="file-thumbnail" src="${file.preview}" alt="${file.name}"
-        style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid #e5e7eb; flex-shrink: 0;">
+        style="width: ${size}px; height: ${size}px; object-fit: cover; border-radius: 4px; border: 1px solid #e5e7eb; flex-shrink: 0;">
     `;
   } else {
     // Generic file icon for other files
     return `
-      <div class="file-thumbnail-placeholder" style="width: 40px; height: 40px; background: #f3f4f6; border-radius: 4px; border: 1px solid #e5e7eb; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 18px;">📄</div>
+      <div class="file-thumbnail-placeholder" style="width: ${size}px; height: ${size}px; background: #f3f4f6; border-radius: 4px; border: 1px solid #e5e7eb; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: ${genericIconSize}px;">📄</div>
     `;
   }
 }
@@ -1732,18 +1788,29 @@ function displayUploadedFiles() {
             ${filesInFolder.map(({ file, index }) => {
               const thumbnailHTML = generateThumbnailHTML(file);
 
+              const isZIP = file.name.toLowerCase().endsWith('.zip');
               return `
-                <li class="uploaded-file-item" style="padding: 10px 15px; border-bottom: 1px solid #f3f4f6; display: flex; justify-content: space-between; align-items: center; background: white;">
-                  <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
-                    ${thumbnailHTML}
-                    <div class="file-info">
-                      <strong class="file-name">${file.name}</strong>
-                      ${file.dimensions ? `<span class="file-dimensions" style="color: #6b7280; margin-left: 10px;">${file.dimensions}</span>` : ''}
-                      <span class="file-size" style="color: #6b7280; margin-left: 10px;">${file.sizeKB} KB</span>
-                      ${file.fileType === 'image' && !file.colorSpaceValid ? '<span class="file-warning" style="color: #ef4444; margin-left: 10px;">⚠️ CMYK</span>' : ''}
+                <li class="uploaded-file-item" style="padding: 10px 15px; border-bottom: 1px solid #f3f4f6; background: white;">
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
+                      ${thumbnailHTML}
+                      <div class="file-info" style="flex: 1;">
+                        <div>
+                          <strong class="file-name">${file.name}</strong>
+                          ${file.dimensions ? `<span class="file-dimensions" style="color: #6b7280; margin-left: 10px;">${file.dimensions}</span>` : ''}
+                          <span class="file-size" style="color: #6b7280; margin-left: 10px;">${file.sizeKB} KB</span>
+                          ${file.fileType === 'image' && !file.colorSpaceValid ? '<span class="file-warning" style="color: #ef4444; margin-left: 10px;">⚠️ CMYK</span>' : ''}
+                        </div>
+                        ${isZIP ? `
+                          <button class="btn-link" onclick="toggleZIPContents('${file.name}', ${index})" style="background: none; border: none; color: #3b82f6; cursor: pointer; padding: 4px 0; margin-top: 4px; font-size: 13px;">
+                            <span id="zip-toggle-${index}">▶ Zobrazit obsah</span>
+                          </button>
+                        ` : ''}
+                      </div>
                     </div>
+                    <button class="remove-file-btn" onclick="removeFile(${index})" style="background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; flex-shrink: 0;">✕</button>
                   </div>
-                  <button class="remove-file-btn" onclick="removeFile(${index})" style="background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; flex-shrink: 0;">✕</button>
+                  ${isZIP ? `<div id="zip-contents-${index}" style="display: none;"></div>` : ''}
                 </li>
               `;
             }).join('')}
@@ -1762,19 +1829,30 @@ function displayUploadedFiles() {
         <ul class="uploaded-files-list" style="list-style: none; padding: 0; margin: 0; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
           ${rootFiles.map(({ file, index }) => {
             const thumbnailHTML = generateThumbnailHTML(file);
+            const isZIP = file.name.toLowerCase().endsWith('.zip');
 
             return `
-              <li class="uploaded-file-item" style="padding: 10px; border-bottom: 1px solid #f3f4f6; display: flex; justify-content: space-between; align-items: center;">
-                <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
-                  ${thumbnailHTML}
-                  <div class="file-info">
-                    <strong class="file-name">${file.name}</strong>
-                    ${file.dimensions ? `<span class="file-dimensions" style="color: #6b7280; margin-left: 10px;">${file.dimensions}</span>` : ''}
-                    <span class="file-size" style="color: #6b7280; margin-left: 10px;">${file.sizeKB} KB</span>
-                    ${file.fileType === 'image' && !file.colorSpaceValid ? '<span class="file-warning" style="color: #ef4444; margin-left: 10px;">⚠️ CMYK</span>' : ''}
+              <li class="uploaded-file-item" style="padding: 10px; border-bottom: 1px solid #f3f4f6;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
+                    ${thumbnailHTML}
+                    <div class="file-info" style="flex: 1;">
+                      <div>
+                        <strong class="file-name">${file.name}</strong>
+                        ${file.dimensions ? `<span class="file-dimensions" style="color: #6b7280; margin-left: 10px;">${file.dimensions}</span>` : ''}
+                        <span class="file-size" style="color: #6b7280; margin-left: 10px;">${file.sizeKB} KB</span>
+                        ${file.fileType === 'image' && !file.colorSpaceValid ? '<span class="file-warning" style="color: #ef4444; margin-left: 10px;">⚠️ CMYK</span>' : ''}
+                      </div>
+                      ${isZIP ? `
+                        <button class="btn-link" onclick="toggleZIPContents('${file.name}', ${index})" style="background: none; border: none; color: #3b82f6; cursor: pointer; padding: 4px 0; margin-top: 4px; font-size: 13px;">
+                          <span id="zip-toggle-${index}">▶ Zobrazit obsah</span>
+                        </button>
+                      ` : ''}
+                    </div>
                   </div>
+                  <button class="remove-file-btn" onclick="removeFile(${index})" style="background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; flex-shrink: 0;">✕</button>
                 </div>
-                <button class="remove-file-btn" onclick="removeFile(${index})" style="background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; flex-shrink: 0;">✕</button>
+                ${isZIP ? `<div id="zip-contents-${index}" style="display: none;"></div>` : ''}
               </li>
             `;
           }).join('')}
@@ -1822,9 +1900,112 @@ function removeFile(index) {
   }
 }
 
+/**
+ * Get file icon based on extension
+ * @param {string} filename - File name
+ * @returns {string} Icon emoji
+ */
+function getFileIcon(filename) {
+  const ext = filename.split('.').pop().toLowerCase();
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif'].includes(ext)) return '🖼️';
+  if (ext === 'html') return '📄';
+  if (ext === 'css') return '🎨';
+  if (ext === 'js') return '⚙️';
+  if (ext === 'zip') return '🗜️';
+  if (ext === 'json') return '📋';
+  if (ext === 'txt') return '📝';
+  return '📁';
+}
+
+/**
+ * Toggle ZIP file contents visibility
+ * @param {string} fileName - Name of the ZIP file
+ * @param {number} fileIndex - Index in uploadedFiles array
+ */
+async function toggleZIPContents(fileName, fileIndex) {
+  const contentsDiv = document.getElementById(`zip-contents-${fileIndex}`);
+  const toggleSpan = document.getElementById(`zip-toggle-${fileIndex}`);
+
+  if (!contentsDiv || !toggleSpan) return;
+
+  if (contentsDiv.style.display === 'none' || !contentsDiv.style.display) {
+    // Load ZIP contents
+    try {
+      const file = appState.uploadedFiles[fileIndex];
+      if (!file || !file.file) {
+        console.error('File not found in uploadedFiles');
+        return;
+      }
+
+      toggleSpan.textContent = '⏳ Načítání...';
+
+      const zip = new JSZip();
+      const contents = await zip.loadAsync(file.file);
+
+      let html = '<div style="margin-top: 10px; padding: 12px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;">';
+      html += '<div style="font-weight: 600; margin-bottom: 8px; color: #374151;">Obsah ZIP souboru:</div>';
+      html += '<ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #4b5563;">';
+
+      let fileCount = 0;
+      for (const [filename, entry] of Object.entries(contents.files)) {
+        if (entry.dir) continue;
+        fileCount++;
+        const size = entry._data.uncompressedSize;
+        const icon = getFileIcon(filename);
+        html += `<li style="margin: 4px 0;">${icon} ${filename} <span style="color: #9ca3af;">(${(size/1024).toFixed(1)} KB)</span></li>`;
+      }
+      html += '</ul>';
+      html += `<div style="margin-top: 8px; font-size: 12px; color: #6b7280;">Celkem: ${fileCount} souborů</div>`;
+      html += '</div>';
+
+      contentsDiv.innerHTML = html;
+      contentsDiv.style.display = 'block';
+      toggleSpan.textContent = '▼ Skrýt obsah';
+    } catch (error) {
+      console.error('Error reading ZIP file:', error);
+      contentsDiv.innerHTML = '<div style="color: #ef4444; padding: 10px;">Chyba při čtení ZIP souboru</div>';
+      contentsDiv.style.display = 'block';
+      toggleSpan.textContent = '▼ Skrýt';
+    }
+  } else {
+    contentsDiv.style.display = 'none';
+    toggleSpan.textContent = '▶ Zobrazit obsah';
+  }
+}
+
 // =============================================================================
 // FILE ANALYSIS & VALIDATION
 // =============================================================================
+
+/**
+ * Build membership map for multi-file format groups
+ * Identifies which files are "active" (needed) vs "excess" (extra)
+ * @param {Array} multiFileGroups - Detected multi-file format groups
+ * @returns {Map} fileName -> { isInGroup, isActive, isExcess, format, groupIndex }
+ */
+function buildMultiFileGroupMembership(multiFileGroups) {
+  const membership = new Map();
+
+  multiFileGroups.forEach((group, groupIndex) => {
+    const requiredCount = group.requiredCount || group.fileCount;
+
+    group.files.forEach((file, fileIndex) => {
+      const fileName = file.name;
+      const isActive = fileIndex < requiredCount; // First N files are active
+
+      membership.set(fileName, {
+        isInGroup: true,
+        isActive: isActive,
+        isExcess: !isActive,
+        format: group.format,
+        groupIndex: groupIndex,
+        complete: group.complete
+      });
+    });
+  });
+
+  return membership;
+}
 
 async function validateCompatibility() {
   if (appState.uploadedFiles.length === 0) {
@@ -1834,6 +2015,9 @@ async function validateCompatibility() {
 
   // Detect multi-file formats
   appState.multiFileGroups = detectMultiFileFormats(appState.uploadedFiles);
+
+  // Build membership map to track which files are active vs excess
+  const groupMembership = buildMultiFileGroupMembership(appState.multiFileGroups);
 
   // Build compatibility matrix for each file
   appState.validationResults = {};
@@ -1852,6 +2036,22 @@ async function validateCompatibility() {
         isSocialMedia: true
       };
       continue;
+    }
+
+    // Check if this file is excess in a multi-file format
+    if (fileData.detectedFormat) {
+      const membership = groupMembership.get(fileData.name);
+      if (membership && membership.isExcess) {
+        // File is beyond required count for its format group
+        // Skip validation entirely - don't show as compatible
+        appState.validationResults[fileData.name] = {
+          file: fileData,
+          compatible: [],
+          incompatible: [],
+          isExcess: true
+        };
+        continue;
+      }
     }
 
     // Check against all networks and tiers
@@ -2112,6 +2312,7 @@ function displayTableValidation() {
                     <div style="flex: 1;">
                       <div><strong>${file.name}</strong></div>
                       <div style="font-size: 12px; color: #6b7280;">${file.dimensions} • ${file.sizeKB}KB</div>
+                      ${file.folderPath ? `<div style="font-size: 11px; color: #9ca3af; font-family: monospace;">📁 ${file.folderPath}</div>` : ''}
                       ${!f.sizeValid ? `<div style="font-size: 12px; color: #ef4444;">⚠️ ${f.sizeIssue}</div>` : ''}
                     </div>
                   </li>
@@ -2507,13 +2708,13 @@ function buildExportPreviewWithCheckboxes(network) {
     html += '<ul style="margin: 0; padding-left: 0; list-style: none; color: #166534;">';
     for (const fileData of assignedFiles) {
       const checkboxId = `banner_${network}_${fileData.fileName.replace(/[^a-zA-Z0-9]/g, '_')}`;
-      const thumbnailURL = createThumbnailURL(fileData.file.file);
       html += `
         <li style="margin-bottom: 8px; display: flex; align-items: center; gap: 10px;">
           <input type="checkbox" id="${checkboxId}" checked onchange="updateBannerSelection('${network}', '${fileData.fileName}')" style="width: 18px; height: 18px; cursor: pointer; accent-color: #10b981; flex-shrink: 0;">
-          <img src="${thumbnailURL}" alt="${fileData.fileName}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid #e5e7eb; flex-shrink: 0;">
+          ${generateThumbnailHTML(fileData.file, 60)}
           <label for="${checkboxId}" style="cursor: pointer; flex: 1;">
-            <strong>${fileData.fileName}</strong> <span style="color: #6b7280; font-size: 12px;">(${fileData.file.dimensions})</span>
+            <div><strong>${fileData.fileName}</strong> <span style="color: #6b7280; font-size: 12px;">(${fileData.file.dimensions})</span></div>
+            ${fileData.file.folderPath ? `<div style="font-size: 11px; color: #9ca3af; font-family: monospace; margin-top: 2px;">📁 ${fileData.file.folderPath}</div>` : ''}
           </label>
         </li>`;
     }
@@ -2532,13 +2733,13 @@ function buildExportPreviewWithCheckboxes(network) {
     html += '<ul style="margin: 0; padding-left: 0; list-style: none; color: #166534;">';
     for (const fileData of otherValidFiles) {
       const checkboxId = `banner_${network}_${fileData.fileName.replace(/[^a-zA-Z0-9]/g, '_')}`;
-      const thumbnailURL = createThumbnailURL(fileData.file.file);
       html += `
         <li style="margin-bottom: 8px; display: flex; align-items: center; gap: 10px;">
           <input type="checkbox" id="${checkboxId}" checked onchange="updateBannerSelection('${network}', '${fileData.fileName}')" style="width: 18px; height: 18px; cursor: pointer; accent-color: #10b981; flex-shrink: 0;">
-          <img src="${thumbnailURL}" alt="${fileData.fileName}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid #e5e7eb; flex-shrink: 0;">
+          ${generateThumbnailHTML(fileData.file, 60)}
           <label for="${checkboxId}" style="cursor: pointer; flex: 1;">
-            <strong>${fileData.fileName}</strong> <span style="color: #6b7280; font-size: 12px;">(${fileData.file.dimensions})</span>
+            <div><strong>${fileData.fileName}</strong> <span style="color: #6b7280; font-size: 12px;">(${fileData.file.dimensions})</span></div>
+            ${fileData.file.folderPath ? `<div style="font-size: 11px; color: #9ca3af; font-family: monospace; margin-top: 2px;">📁 ${fileData.file.folderPath}</div>` : ''}
           </label>
         </li>`;
     }
@@ -2630,6 +2831,47 @@ function toggleExportPreview(key) {
   }
 }
 
+/**
+ * Sort files by Format → Folder → Filename
+ * Prioritizes rich media formats first
+ */
+function sortFilesByFormatFolderName(files) {
+  return files.sort((a, b) => {
+    // 1. Sort by format type (prioritize rich media)
+    const formatA = a.file.detectedFormat || 'standard';
+    const formatB = b.file.detectedFormat || 'standard';
+
+    // Rich media formats first (ordered by importance)
+    const richMediaOrder = [
+      'branding', 'branding-scratcher', 'branding-uncover', 'branding-videopanel',
+      'spinner', 'spincube', 'exclusive', 'interscroller', 'inarticle', 'kombi',
+      'branding-sklik', 'mobilni-interscroller'
+    ];
+
+    const orderA = richMediaOrder.indexOf(formatA);
+    const orderB = richMediaOrder.indexOf(formatB);
+
+    // If both are rich media, sort by their order in the list
+    if (orderA !== -1 && orderB !== -1) {
+      return orderA - orderB;
+    }
+
+    // Rich media comes before standard
+    if (orderA !== -1 && orderB === -1) return -1;
+    if (orderA === -1 && orderB !== -1) return 1;
+
+    // 2. Sort by folder path
+    const folderA = a.file.folderPath || '';
+    const folderB = b.file.folderPath || '';
+    if (folderA !== folderB) {
+      return folderA.localeCompare(folderB);
+    }
+
+    // 3. Sort by filename
+    return a.fileName.localeCompare(b.fileName);
+  });
+}
+
 function buildValidDetails(network) {
   // Get all valid files for this network (across all tiers)
   const assignedFiles = [];
@@ -2654,6 +2896,10 @@ function buildValidDetails(network) {
     }
   }
 
+  // Sort files by Format → Folder → Filename
+  sortFilesByFormatFolderName(assignedFiles);
+  sortFilesByFormatFolderName(otherValidFiles);
+
   if (assignedFiles.length === 0 && otherValidFiles.length === 0) {
     return '<p style="color: #6b7280;">Žádné validní bannery</p>';
   }
@@ -2666,17 +2912,13 @@ function buildValidDetails(network) {
     html += '<div style="font-weight: 600; color: #059669; margin-bottom: 8px; font-size: 14px;">📂 Přiřazené bannery:</div>';
     html += '<ul style="margin: 0; padding-left: 0; list-style: none; color: #166534;">';
     for (const fileInfo of assignedFiles) {
-      const thumbnailURL = fileInfo.file.preview || (fileInfo.file.file ? createThumbnailURL(fileInfo.file.file) : '');
       html += `
         <li style="margin-bottom: 8px; display: flex; align-items: center; gap: 10px; padding: 8px; background: #f0fdf4; border-radius: 6px; border: 1px solid #bbf7d0;">
-          ${thumbnailURL ? `
-            <img src="${thumbnailURL}" alt="${fileInfo.fileName}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid #e5e7eb; flex-shrink: 0;">
-          ` : `
-            <div style="width: 60px; height: 60px; background: #f3f4f6; border-radius: 4px; border: 1px solid #e5e7eb; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 24px;">📄</div>
-          `}
+          ${generateThumbnailHTML(fileInfo.file, 60)}
           <div style="flex: 1;">
             <div><strong>${fileInfo.fileName}</strong></div>
             <div style="color: #166534; font-size: 12px;">${fileInfo.file.dimensions} • ${fileInfo.file.sizeKB} KB</div>
+            ${fileInfo.file.folderPath ? `<div style="font-size: 11px; color: #6b7280; font-family: monospace;">📁 ${fileInfo.file.folderPath}</div>` : ''}
           </div>
         </li>`;
     }
@@ -2690,17 +2932,13 @@ function buildValidDetails(network) {
     html += '<div style="font-weight: 600; color: #059669; margin-bottom: 8px; font-size: 14px;">✓ Další kompatibilní bannery:</div>';
     html += '<ul style="margin: 0; padding-left: 0; list-style: none; color: #166534;">';
     for (const fileInfo of otherValidFiles) {
-      const thumbnailURL = fileInfo.file.preview || (fileInfo.file.file ? createThumbnailURL(fileInfo.file.file) : '');
       html += `
         <li style="margin-bottom: 8px; display: flex; align-items: center; gap: 10px; padding: 8px; background: #f0fdf4; border-radius: 6px; border: 1px solid #bbf7d0;">
-          ${thumbnailURL ? `
-            <img src="${thumbnailURL}" alt="${fileInfo.fileName}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid #e5e7eb; flex-shrink: 0;">
-          ` : `
-            <div style="width: 60px; height: 60px; background: #f3f4f6; border-radius: 4px; border: 1px solid #e5e7eb; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 24px;">📄</div>
-          `}
+          ${generateThumbnailHTML(fileInfo.file, 60)}
           <div style="flex: 1;">
             <div><strong>${fileInfo.fileName}</strong></div>
             <div style="color: #166534; font-size: 12px;">${fileInfo.file.dimensions} • ${fileInfo.file.sizeKB} KB</div>
+            ${fileInfo.file.folderPath ? `<div style="font-size: 11px; color: #6b7280; font-family: monospace;">📁 ${fileInfo.file.folderPath}</div>` : ''}
           </div>
         </li>`;
     }
@@ -3160,6 +3398,27 @@ function displayExportSettings() {
 
   exportNetworksSection.innerHTML = html;
 }
+
+/**
+ * Update all export previews with current settings
+ * Called when user changes campaign settings in Step 5
+ */
+function updateAllExportPreviews() {
+  // Save current form values to appState
+  appState.campaignName = document.getElementById('campaignName')?.value || '';
+  appState.landingURL = document.getElementById('landingURL')?.value || '';
+  appState.contentName = document.getElementById('utmContent')?.value || '';
+
+  // Update Zbozi state
+  const zboziToggle = document.getElementById('zboziToggle')?.checked || false;
+  appState.isZboziCampaign = zboziToggle;
+
+  // Refresh export settings display
+  displayExportSettings();
+
+  console.log('Export previews updated');
+}
+
 /**
  * Update banner URL when format, service, or anchor changes
  */
@@ -3584,6 +3843,158 @@ async function exportAllNetworksZIP() {
   }
 }
 
+/**
+ * Export consolidated XLSX with all networks in single sheet
+ */
+async function exportAllNetworksConsolidatedXLSX() {
+  try {
+    const campaignName = appState.campaignName || 'campaign';
+    const contentName = appState.contentName || 'content';
+    const landingURL = appState.landingURL || '';
+    const isZbozi = appState.isZboziCampaign || false;
+
+    // Build all rows
+    const allRows = [];
+
+    // Header row
+    allRows.push([
+      'Síť', 'Tier', 'Kampaň', 'Obsah', 'Formát', 'Rozměr', 'Stopáž',
+      'Služba', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content',
+      'Landing page', 'Ukotvení', 'Název banneru', 'Finální URL'
+    ]);
+
+    let totalRows = 0;
+
+    // Iterate through all selected networks
+    for (const selection of appState.selectedNetworks) {
+      if (!selection.enabled) continue;
+
+      const network = selection.network;
+      const tiers = selection.tiers || ['LOW'];
+
+      for (const tier of tiers) {
+        // Get valid files for this network/tier
+        const eligibleFiles = [];
+
+        for (const [fileName, validation] of Object.entries(appState.validationResults)) {
+          const matchingPlacement = validation.compatible.find(c =>
+            c.network === network && c.tier === tier
+          );
+
+          if (matchingPlacement && validation.file) {
+            eligibleFiles.push({
+              fileName: fileName,
+              file: validation.file,
+              placement: matchingPlacement
+            });
+          }
+        }
+
+        // Generate rows for each file
+        for (const fileInfo of eligibleFiles) {
+          const file = fileInfo.file;
+          const dimensions = file.dimensions || '';
+          const format = getFormatDisplayName(dimensions, fileInfo.placement.format);
+
+          // Get service selection for this file (if available in export state)
+          const service = 'hp'; // Default - would need to get from UI state in real implementation
+
+          // Generate final URL
+          const finalURL = generateBannerURL({
+            network: network,
+            tier: tier,
+            campaignName: campaignName,
+            contentName: contentName,
+            landingURL: landingURL,
+            dimensions: dimensions,
+            format: format,
+            service: service,
+            anchor: '',
+            isZbozi: isZbozi,
+            fileName: file.fileName || '',
+            placement: ''
+          });
+
+          // Parse URL to extract UTM params
+          let utm_source = '', utm_medium = '', utm_campaign = '', utm_content = '';
+          try {
+            const urlObj = new URL(finalURL);
+            utm_source = urlObj.searchParams.get('utm_source') || '';
+            utm_medium = urlObj.searchParams.get('utm_medium') || '';
+            utm_campaign = urlObj.searchParams.get('utm_campaign') || '';
+            utm_content = urlObj.searchParams.get('utm_content') || '';
+          } catch (e) {
+            console.warn('Failed to parse URL:', finalURL);
+          }
+
+          allRows.push([
+            network,
+            tier,
+            campaignName,
+            contentName,
+            format,
+            dimensions,
+            '', // Stopáž (duration) - empty for static banners
+            service,
+            utm_source,
+            utm_medium,
+            utm_campaign,
+            utm_content,
+            landingURL,
+            '', // Ukotvení (anchor) - empty by default
+            file.fileName || file.name,
+            finalURL
+          ]);
+
+          totalRows++;
+        }
+      }
+    }
+
+    if (totalRows === 0) {
+      alert('Žádné bannery k exportu.');
+      return;
+    }
+
+    // Create XLSX using SheetJS library
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(allRows);
+
+    // Set column widths for better readability
+    const colWidths = [
+      { wch: 12 }, // Síť
+      { wch: 8 },  // Tier
+      { wch: 20 }, // Kampaň
+      { wch: 15 }, // Obsah
+      { wch: 15 }, // Formát
+      { wch: 12 }, // Rozměr
+      { wch: 10 }, // Stopáž
+      { wch: 10 }, // Služba
+      { wch: 18 }, // utm_source
+      { wch: 25 }, // utm_medium
+      { wch: 30 }, // utm_campaign
+      { wch: 35 }, // utm_content
+      { wch: 30 }, // Landing page
+      { wch: 15 }, // Ukotvení
+      { wch: 30 }, // Název banneru
+      { wch: 60 }  // Finální URL
+    ];
+    ws['!cols'] = colWidths;
+
+    XLSX.utils.book_append_sheet(wb, ws, 'All Networks');
+
+    // Download
+    const safeCampaignName = campaignName.replace(/[^a-zA-Z0-9-_]/g, '_').toLowerCase();
+    const filename = `${safeCampaignName}_all_networks_consolidated.xlsx`;
+    XLSX.writeFile(wb, filename);
+
+    alert(`✅ Konsolidovaný XLSX úspěšně vyexportován!\n\nObsah:\n- ${allRows.length - 1} řádků dat (+ hlavička)\n- Všechny systémy v jednom souboru`);
+  } catch (error) {
+    console.error('Consolidated XLSX export error:', error);
+    alert('Chyba při vytváření konsolidovaného XLSX: ' + error.message);
+  }
+}
+
 async function exportCSV() {
   if (appState.selectedNetworks.length === 0) {
     alert('Please select at least one network first');
@@ -3677,6 +4088,9 @@ window.updateExportPreview = updateExportPreview;
 window.updateBannerURL = updateBannerURL;
 window.copyURL = copyURL;
 window.displayExportSettings = displayExportSettings;
-window.toggleHighTierSection = toggleHighTierSection;
+window.updateAllExportPreviews = updateAllExportPreviews;
 window.exportNetworkZIP = exportNetworkZIP;
+window.exportAllNetworksConsolidatedXLSX = exportAllNetworksConsolidatedXLSX;
 window.exportCSV = exportCSV;
+window.toggleZIPContents = toggleZIPContents;
+window.toggleFolder = toggleFolder;

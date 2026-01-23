@@ -111,6 +111,15 @@ const CREATIVE_SPECS = {
       fileRoles: ['cover', 'uncover'],
       notes: 'Dvě kreativy: cover a uncover, potřeba důkladně pročíst požadavky v odkaze'
     },
+    'branding-videopanel': {
+      name: 'Branding Videopanel',
+      dimensions: ['2560x1440'],
+      maxSize: 600, // KB
+      formats: ['jpg', 'png', 'gif', 'html5'],
+      device: 'Desktop',
+      tier: ['HIGH'],
+      notes: 'Same technical specs as base branding. Video panel placement - video content can be embedded in HTML5 creatives.'
+    },
     'inarticle': {
       name: 'Inarticle',
       dimensions: ['640x480', '338x190', '400x300', '800x533', '1200x628', '1200x1200'],
@@ -519,6 +528,7 @@ const FORMAT_SYSTEM_MAPPING = {
   'exclusive': ['SOS'],
   'branding-scratcher': ['SOS'],
   'branding-uncover': ['SOS'],
+  'branding-videopanel': ['SOS'],
   'spinner': ['SOS'],
   'nativni-inzerat': ['SOS'], // In-article / native ad
 
@@ -647,7 +657,7 @@ function getFormatDisplayName(dimensions, specKey) {
   // For special formats, use spec key mapping
   if (specKey && specKey.includes('branding-scratcher')) return 'scratcher';
   if (specKey && specKey.includes('branding-uncover')) return 'uncover';
-  if (specKey && specKey.includes('branding-videopanel')) return 'branding-videopanel';
+  if (specKey && specKey.includes('branding-videopanel')) return 'videopanel';
   if (specKey && specKey.includes('branding-sklik')) return 'branding-sklik';
   if (specKey && specKey.includes('branding')) return 'branding';
   if (specKey && specKey.includes('interscroller')) return 'interscroller';
@@ -826,6 +836,8 @@ function detectMultiFileFormats(allFiles) {
   // Only match files with "uncover" in name or folder to avoid mixing with branding-scratcher
   const uncoverFiles = allFiles.filter(f => {
     if (f.dimensions !== '2560x1440') return false;
+    // Skip HTML5 files - branding-uncover only supports static images
+    if (f.isHTML5 || f.fileType === 'html5') return false;
     const fileName = (f.name || '').toLowerCase();
     const folderPath = (f.folderPath || '').toLowerCase();
     return fileName.includes('uncover') || folderPath.includes('uncover');
@@ -865,6 +877,12 @@ function detectMultiFileFormats(allFiles) {
   // Group by folder path or filename containing "spincube"
   const spincubeByFolder = {};
   for (const file of spincubeFiles) {
+    // Skip HTML5 files - spincube only supports static images
+    if (file.isHTML5 || file.fileType === 'html5') {
+      ungroupedSpincube.push(file);
+      continue;
+    }
+
     const fileName = (file.name || '').toLowerCase();
     const folderPath = (file.folderPath || '').toLowerCase();
 
@@ -917,6 +935,12 @@ function detectMultiFileFormats(allFiles) {
   const nonSpinnerSkyscrapers = [];
 
   for (const file of skyscraperFiles) {
+    // Skip HTML5 files - spinner only supports static images
+    if (file.isHTML5 || file.fileType === 'html5') {
+      nonSpinnerSkyscrapers.push(file);
+      continue;
+    }
+
     const fileName = (file.name || '').toLowerCase();
     const folderPath = (file.folderPath || '').toLowerCase();
 

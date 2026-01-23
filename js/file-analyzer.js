@@ -199,7 +199,8 @@ function detectFormatFromName(filename, folderPath = '') {
   const searchText = (filename + ' ' + folderPath).toLowerCase();
 
   // Social media detection (exclude from all ad systems)
-  const socialKeywords = ['some', 'social', 'facebook', 'linkedin', 'twitter', 'instagram', 'fb'];
+  // Note: Use specific platform names only - avoid broad keywords like 'some' which cause false positives
+  const socialKeywords = ['social-media', 'facebook', 'linkedin', 'twitter', 'instagram', 'tiktok'];
   for (const keyword of socialKeywords) {
     if (searchText.includes(keyword)) {
       return {
@@ -248,6 +249,47 @@ function detectFormatFromName(filename, folderPath = '') {
     };
   }
 
+  // Check for branding formats with systematic second-word parsing
+  if (searchText.includes('branding')) {
+    // Parse second word after "branding" to determine sub-type
+    const brandingMatch = searchText.match(/branding[\s-]+(scratcher|scratch|uncover|videopanel)/i);
+
+    if (brandingMatch) {
+      const subType = brandingMatch[1].toLowerCase();
+      if (subType === 'scratcher' || subType === 'scratch') {
+        return {
+          detectedFormat: 'branding-scratcher',
+          detectedSystem: 'SOS',
+          confidence: 'high',
+          isSocialMedia: false
+        };
+      } else if (subType === 'uncover') {
+        return {
+          detectedFormat: 'branding-uncover',
+          detectedSystem: 'SOS',
+          confidence: 'high',
+          isSocialMedia: false
+        };
+      } else if (subType === 'videopanel') {
+        return {
+          detectedFormat: 'branding-videopanel',
+          detectedSystem: 'SOS',
+          confidence: 'high',
+          isSocialMedia: false
+        };
+      }
+    }
+
+    // No sub-type specified, use default branding
+    return {
+      detectedFormat: 'branding',
+      detectedSystem: null, // Can be SOS or SKLIK
+      confidence: 'medium',
+      isSocialMedia: false
+    };
+  }
+
+  // Standalone keywords for backward compatibility
   if (searchText.includes('scratcher') || searchText.includes('scratch')) {
     return {
       detectedFormat: 'branding-scratcher',
@@ -266,21 +308,20 @@ function detectFormatFromName(filename, folderPath = '') {
     };
   }
 
-  if (searchText.includes('interscroller') || searchText.includes('inter-scroller')) {
+  if (searchText.includes('videopanel')) {
     return {
-      detectedFormat: 'interscroller',
-      detectedSystem: null, // Can be SOS or SKLIK
+      detectedFormat: 'branding-videopanel',
+      detectedSystem: 'SOS',
       confidence: 'high',
       isSocialMedia: false
     };
   }
 
-  // General format keywords
-  if (searchText.includes('branding')) {
+  if (searchText.includes('interscroller') || searchText.includes('inter-scroller')) {
     return {
-      detectedFormat: 'branding',
+      detectedFormat: 'interscroller',
       detectedSystem: null, // Can be SOS or SKLIK
-      confidence: 'medium',
+      confidence: 'high',
       isSocialMedia: false
     };
   }
@@ -389,6 +430,9 @@ async function analyzeFile(file, folderPath = '') {
         analysis.isHTML5 = true;
         analysis.fileType = 'html5';
         analysis.format = 'html5';
+        // Override any folder-based format detection
+        analysis.detectedFormat = 'html5-banner';
+        analysis.detectedSystem = null; // HTML5 can work with multiple systems
 
         // Validate HTML5 banner
         const validation = await HTML5Validator.validateHTML5Banner(file);

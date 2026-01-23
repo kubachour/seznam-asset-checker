@@ -174,18 +174,78 @@
     <div class="section" id="step5" data-step-name="export">
       <h2 class="step-heading">Export bannerů</h2>
 
+      <!-- Export Settings Panel -->
+      <div class="export-settings-panel" style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-bottom: 30px;">
+        <h3 style="margin-top: 0; color: #1f2937; font-size: 18px; font-weight: 600;">⚙️ Nastavení exportu</h3>
+
+        <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px;">
+          <div class="form-group">
+            <label for="campaignName" style="display: block; margin-bottom: 8px; font-weight: 500; color: #374151;">Název kampaně *</label>
+            <input type="text" id="campaignName" placeholder="např. jarni-kampan-2026" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+          </div>
+
+          <div class="form-group">
+            <label for="landingURL" style="display: block; margin-bottom: 8px; font-weight: 500; color: #374151;">Landing URL *</label>
+            <input type="text" id="landingURL" placeholder="https://example.com" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+          </div>
+
+          <div class="form-group">
+            <label for="utmContent" style="display: block; margin-bottom: 8px; font-weight: 500; color: #374151;">UTM Content</label>
+            <input type="text" id="utmContent" placeholder="např. banner-hp" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+          </div>
+
+          <div class="form-group">
+            <label for="contentVariantsList" style="display: block; margin-bottom: 8px; font-weight: 500; color: #374151;">Varianty obsahu (oddělené čárkou)</label>
+            <input type="text" id="contentVariantsList" placeholder="V1, V2, V3" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+          </div>
+        </div>
+
+        <div class="zbozi-section" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+          <div class="form-group" style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+            <input type="checkbox" id="zboziToggle" style="width: 18px; height: 18px; cursor: pointer;">
+            <label for="zboziToggle" style="margin: 0; font-weight: 500; color: #374151; cursor: pointer;">🛒 Zbozi speciální pravidla</label>
+          </div>
+
+          <div id="zboziDateFields" style="display: none; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div class="form-group">
+              <label for="campaignStartDate" style="display: block; margin-bottom: 8px; font-weight: 500; color: #374151;">Datum zahájení kampaně</label>
+              <input type="date" id="campaignStartDate" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+            </div>
+            <div class="form-group">
+              <label for="campaignEndDate" style="display: block; margin-bottom: 8px; font-weight: 500; color: #374151;">Datum ukončení kampaně</label>
+              <input type="date" id="campaignEndDate" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+            </div>
+          </div>
+        </div>
+
+        <button class="btn-secondary" style="margin-top: 15px;" onclick="updateAllExportPreviews()">
+          🔄 Aktualizovat URL náhledy
+        </button>
+      </div>
+
       <!-- Export Options Per Network -->
       <div id="exportNetworks" class="export-networks-container"></div>
 
       <!-- Download All Button -->
-      <div style="margin: 30px 0; text-align: center; padding: 20px; background: #f0fdf4; border-radius: 8px; border: 2px solid #10b981;">
-        <h3 style="margin: 0 0 15px 0; color: #1f2937; font-size: 20px;">📦 Stáhnout všechny balíčky najednou</h3>
-        <p style="margin: 0 0 20px 0; color: #6b7280; font-size: 14px;">
-          Stáhne jediný ZIP soubor obsahující všechny vybrané systémy v samostatných složkách s přejmenovanými bannery a XLS soubory.
+      <div style="margin: 30px 0; padding: 20px; background: #f0fdf4; border-radius: 8px; border: 2px solid #10b981;">
+        <h3 style="margin: 0 0 15px 0; color: #1f2937; font-size: 20px; text-align: center;">📦 Hromadný export</h3>
+        <p style="margin: 0 0 20px 0; color: #6b7280; font-size: 14px; text-align: center;">
+          Vyberte způsob exportu všech vybraných systémů najednou:
         </p>
-        <button class="btn-primary" onclick="exportAllNetworksZIP()" style="padding: 15px 40px; font-size: 18px; font-weight: 600;">
-          📥 Stáhnout všechny balíčky
-        </button>
+        <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+          <button class="btn-primary" onclick="exportAllNetworksZIP()" style="padding: 15px 30px; font-size: 16px; font-weight: 600;">
+            📥 ZIP s balíčky
+            <div style="font-size: 12px; font-weight: normal; margin-top: 5px; opacity: 0.9;">
+              Samostatné složky + XLSX pro každý systém
+            </div>
+          </button>
+          <button class="btn-primary" onclick="exportAllNetworksConsolidatedXLSX()" style="padding: 15px 30px; font-size: 16px; font-weight: 600; background: #0891b2;">
+            📊 Konsolidovaný XLSX
+            <div style="font-size: 12px; font-weight: normal; margin-top: 5px; opacity: 0.9;">
+              Jeden soubor se všemi systémy
+            </div>
+          </button>
+        </div>
       </div>
 
       <div class="nav-buttons">
@@ -198,7 +258,13 @@
   <!-- Version Footer -->
   <footer class="app-footer">
     <div class="version-info">
-      <span id="appVersion">v1.0.4</span>
+      <a id="appVersion"
+         href="https://github.com/kubachour/seznam-asset-checker/releases/latest"
+         target="_blank"
+         style="color: #3b82f6; text-decoration: none; cursor: pointer; font-weight: 500;"
+         title="View release notes on GitHub">
+        v1.0.4
+      </a>
       <span class="separator">•</span>
       <a href="formaty.html" style="color: #3b82f6; text-decoration: none; font-weight: 500;">📊 Přehled formátů</a>
     </div>

@@ -2,6 +2,9 @@
 server.py
 .gitignore
 
+#Creative test files
+TEST-ASSETS/
+
 # Claude Code files
 .claude/
 .claude_history
