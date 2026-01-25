@@ -24,6 +24,11 @@
     <div class="section active" id="step1" data-step-name="upload">
       <h2 class="step-heading">Nahrání bannerů</h2>
 
+      <div class="nav-buttons" style="margin-bottom: 20px; margin-top: 0;">
+        <div></div>
+        <button class="btn-primary" id="analyzeBtnTop" onclick="validateCompatibility()" disabled>Další: Zobrazit kompatibilní systémy →</button>
+      </div>
+
       <div class="info-box" id="uploadInfoBox">
         <strong>📦 Podporované formáty:</strong>
         <ul>
@@ -136,6 +141,11 @@
       <h2 class="step-heading">Validace podle tabulky</h2>
       <p class="subtitle">Kontrola nahraných bannerů proti kampaňovým požadavkům</p>
 
+      <div class="nav-buttons" style="margin-bottom: 20px; margin-top: 0;">
+        <button class="btn-secondary" onclick="goToStep(1)">← Zpět</button>
+        <button class="btn-primary" onclick="goToStep(3)">Další: Validace pro systémy →</button>
+      </div>
+
       <div id="tableValidationResults" class="table-validation-container"></div>
 
       <div class="nav-buttons">
@@ -147,6 +157,11 @@
     <!-- Step 3: System Validation Results -->
     <div class="section" id="step3" data-step-name="system-validation">
       <h2 class="step-heading">Validace pro systémy</h2>
+
+      <div class="nav-buttons" style="margin-bottom: 20px; margin-top: 0;">
+        <button class="btn-secondary" onclick="goToStep(2)">← Zpět</button>
+        <button class="btn-primary" id="reviewBtnTop" onclick="goToStep(4)">Další: Nastavení exportu →</button>
+      </div>
 
       <div id="networkToggles" class="validation-results-container"></div>
 
@@ -162,6 +177,11 @@
       <h2 class="step-heading">Výběr systémů</h2>
       <p class="subtitle">Vyber prosím systém pro přejmenování bannerů a export URL.</p>
 
+      <div class="nav-buttons" style="margin-bottom: 20px; margin-top: 0;">
+        <button class="btn-secondary" onclick="goToStep(3)">← Zpět</button>
+        <button class="btn-primary" id="exportBtnTop" onclick="goToStep(5)">Další: Export →</button>
+      </div>
+
       <div id="networkSelection" class="network-selection-container"></div>
 
       <div class="nav-buttons">
@@ -173,6 +193,11 @@
     <!-- Step 5: Export (formerly Step 6) -->
     <div class="section" id="step5" data-step-name="export">
       <h2 class="step-heading">Export bannerů</h2>
+
+      <div class="nav-buttons" style="margin-bottom: 20px; margin-top: 0;">
+        <button class="btn-secondary" onclick="goToStep(4)">← Zpět</button>
+        <button class="btn-primary" onclick="location.reload()">Nová validace</button>
+      </div>
 
       <!-- Export Settings Panel -->
       <div class="export-settings-panel" style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-bottom: 30px;">
@@ -249,7 +274,7 @@
       </div>
 
       <div class="nav-buttons">
-        <button class="btn-secondary" onclick="goToStep(5)">← Zpět</button>
+        <button class="btn-secondary" onclick="goToStep(4)">← Zpět</button>
         <button class="btn-primary" onclick="location.reload()">Nová validace</button>
       </div>
     </div>
@@ -263,7 +288,7 @@
          target="_blank"
          style="color: #3b82f6; text-decoration: none; cursor: pointer; font-weight: 500;"
          title="View release notes on GitHub">
-        v1.0.4
+        v1.5.2
       </a>
       <span class="separator">•</span>
       <a href="formaty.html" style="color: #3b82f6; text-decoration: none; font-weight: 500;">📊 Přehled formátů</a>
@@ -273,9 +298,16 @@
   <!-- Application Modules (load in order) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
+  <!-- File type definitions - MUST LOAD FIRST -->
+  <script src="js/file-types.js"></script>
+
+  <!-- Core modules -->
   <script src="js/specs-rules.js"></script>
   <script src="js/html5-validator.js"></script>
   <script src="js/file-analyzer.js"></script>
+
+  <!-- Main app - loads last -->
   <script src="js/app.js"></script>
 </body>
 </html>

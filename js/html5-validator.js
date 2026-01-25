@@ -11,7 +11,13 @@
     maxFiles: 40,
     maxSubdirectoryLevels: 2,
     requiredHTMLFiles: 1, // Exactly 1 HTML file
-    allowedExtensions: ['htm', 'html', 'css', 'js', 'gif', 'png', 'jpg', 'jpeg', 'svg', 'webp', 'avif', 'woff', 'woff2', 'ttf', 'eot', 'json', 'txt', 'xml'],
+    allowedExtensions: [
+      ...FILE_TYPES.HTML_EXTENSIONS,        // HTML files
+      ...FILE_TYPES.IMAGE_EXTENSIONS,       // Images
+      'css', 'js', 'svg',                   // Scripts and styles
+      'woff', 'woff2', 'ttf', 'eot',       // Fonts
+      'json', 'txt', 'xml'                  // Data files
+    ],
     prohibitedFunctions: [
       'window.open(',
       'Enabler.exit(',

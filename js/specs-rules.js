@@ -11,7 +11,7 @@ const CREATIVE_SPECS = {
       name: 'Sponzor služby',
       dimensions: ['300x250'],
       maxSize: 150, // KB
-      formats: ['jpg', 'png', 'gif'],
+      formats: ['jpg', 'png', 'gif', 'html5'],
       device: 'Desktop',
       tier: ['HIGH', 'LOW']
     },
@@ -19,7 +19,7 @@ const CREATIVE_SPECS = {
       name: 'Mobilní square',
       dimensions: ['300x300'],
       maxSize: 150,
-      formats: ['jpg', 'png', 'gif'],
+      formats: ['jpg', 'png', 'gif', 'html5'],
       device: 'Mobil',
       tier: ['HIGH', 'LOW']
     },
@@ -27,7 +27,7 @@ const CREATIVE_SPECS = {
       name: 'Skyscraper',
       dimensions: ['300x600'],
       maxSize: 150,
-      formats: ['jpg', 'png', 'gif'],
+      formats: ['jpg', 'png', 'gif', 'html5'],
       device: 'Desktop',
       tier: ['HIGH', 'LOW']
     },
@@ -35,7 +35,7 @@ const CREATIVE_SPECS = {
       name: 'Wallpaper / Produktová plachta',
       dimensions: ['480x300'],
       maxSize: 150,
-      formats: ['jpg', 'png', 'gif'],
+      formats: ['jpg', 'png', 'gif', 'html5'],
       device: 'Desktop/Mobil',
       tier: ['HIGH', 'LOW']
     },
@@ -43,7 +43,7 @@ const CREATIVE_SPECS = {
       name: 'Mobilní square premium / Mobilní square',
       dimensions: ['480x480'],
       maxSize: 150,
-      formats: ['jpg', 'png', 'gif'],
+      formats: ['jpg', 'png', 'gif', 'html5'],
       device: 'Mobil',
       tier: ['HIGH', 'LOW']
     },
@@ -51,7 +51,7 @@ const CREATIVE_SPECS = {
       name: 'Leaderboard',
       dimensions: ['970x210'],
       maxSize: 150,
-      formats: ['jpg', 'png', 'gif'],
+      formats: ['jpg', 'png', 'gif', 'html5'],
       device: 'Desktop',
       tier: ['HIGH', 'LOW']
     },
@@ -59,7 +59,7 @@ const CREATIVE_SPECS = {
       name: 'Rectangle',
       dimensions: ['970x310'],
       maxSize: 150,
-      formats: ['jpg', 'png', 'gif'],
+      formats: ['jpg', 'png', 'gif', 'html5'],
       device: 'Desktop',
       tier: ['HIGH', 'LOW']
     }
@@ -190,7 +190,7 @@ const CREATIVE_SPECS = {
       name: 'Wallpaper',
       dimensions: ['480x300'],
       maxSize: 250,
-      formats: ['jpg', 'png', 'gif'],
+      formats: ['jpg', 'png', 'gif', 'html5'],
       device: 'Desktop/Mobil',
       tier: ['HIGH', 'LOW']
     },
@@ -198,7 +198,7 @@ const CREATIVE_SPECS = {
       name: 'Leaderboard',
       dimensions: ['970x210'],
       maxSize: 250,
-      formats: ['jpg', 'png', 'gif'],
+      formats: ['jpg', 'png', 'gif', 'html5'],
       device: 'Desktop',
       tier: ['HIGH', 'LOW']
     },
@@ -206,7 +206,7 @@ const CREATIVE_SPECS = {
       name: 'Sponzor služby',
       dimensions: ['300x250'],
       maxSize: 250,
-      formats: ['jpg', 'png', 'gif'],
+      formats: ['jpg', 'png', 'gif', 'html5'],
       device: 'Desktop',
       tier: ['HIGH', 'LOW']
     },
@@ -214,7 +214,7 @@ const CREATIVE_SPECS = {
       name: 'Rectangle',
       dimensions: ['970x310'],
       maxSize: 250,
-      formats: ['jpg', 'png', 'gif'],
+      formats: ['jpg', 'png', 'gif', 'html5'],
       device: 'Desktop',
       tier: ['HIGH', 'LOW']
     },
@@ -222,7 +222,7 @@ const CREATIVE_SPECS = {
       name: 'Skyscraper',
       dimensions: ['300x600'],
       maxSize: 250,
-      formats: ['jpg', 'png', 'gif'],
+      formats: ['jpg', 'png', 'gif', 'html5'],
       device: 'Desktop',
       tier: ['HIGH', 'LOW']
     },
@@ -230,7 +230,7 @@ const CREATIVE_SPECS = {
       name: 'Mobilní square',
       dimensions: ['300x300', '480x480'],
       maxSize: 250,
-      formats: ['jpg', 'png', 'gif'],
+      formats: ['jpg', 'png', 'gif', 'html5'],
       device: 'Mobil',
       tier: ['HIGH', 'LOW']
     },
@@ -253,7 +253,7 @@ const CREATIVE_SPECS = {
       name: 'Wallpaper',
       dimensions: ['480x300'],
       maxSize: 250,
-      formats: ['jpg', 'png', 'gif'],
+      formats: ['jpg', 'png', 'gif', 'html5'],
       device: 'Desktop/Mobil',
       tier: ['HIGH', 'LOW']
     },
@@ -261,7 +261,7 @@ const CREATIVE_SPECS = {
       name: 'Leaderboard',
       dimensions: ['970x210'],
       maxSize: 250,
-      formats: ['jpg', 'png', 'gif'],
+      formats: ['jpg', 'png', 'gif', 'html5'],
       device: 'Desktop',
       tier: ['HIGH', 'LOW']
     },
@@ -269,7 +269,7 @@ const CREATIVE_SPECS = {
       name: 'Sponzor služby',
       dimensions: ['300x250'],
       maxSize: 250,
-      formats: ['jpg', 'png', 'gif'],
+      formats: ['jpg', 'png', 'gif', 'html5'],
       device: 'Desktop',
       tier: ['HIGH', 'LOW']
     },
@@ -277,7 +277,7 @@ const CREATIVE_SPECS = {
       name: 'Rectangle',
       dimensions: ['970x310'],
       maxSize: 250,
-      formats: ['jpg', 'png', 'gif'],
+      formats: ['jpg', 'png', 'gif', 'html5'],
       device: 'Desktop',
       tier: ['HIGH', 'LOW']
     },
@@ -285,7 +285,7 @@ const CREATIVE_SPECS = {
       name: 'Skyscraper',
       dimensions: ['300x600'],
       maxSize: 250,
-      formats: ['jpg', 'png', 'gif'],
+      formats: ['jpg', 'png', 'gif', 'html5'],
       device: 'Desktop',
       tier: ['HIGH', 'LOW']
     },
@@ -293,7 +293,7 @@ const CREATIVE_SPECS = {
       name: 'Mobilní square',
       dimensions: ['300x300', '480x480'],
       maxSize: 250,
-      formats: ['jpg', 'png', 'gif'],
+      formats: ['jpg', 'png', 'gif', 'html5'],
       device: 'Mobil',
       tier: ['HIGH', 'LOW']
     },
@@ -326,7 +326,7 @@ const CREATIVE_SPECS = {
       name: 'Skyscraper sticky',
       dimensions: ['160x600', '300x600'],
       maxSize: 250,
-      formats: ['jpg', 'png', 'gif'],
+      formats: ['jpg', 'png', 'gif', 'html5'],
       device: 'Desktop',
       tier: ['HIGH', 'LOW']
     },
@@ -732,6 +732,13 @@ function findMatchingFormats(fileData, network = null, tier = null) {
       // Check if dimensions match
       if (!spec.dimensions.includes(fileData.dimensions)) continue;
 
+      // For multi-file formats, require detectedFormat to match
+      // This prevents random files with matching dimensions from being validated as compatible
+      // Only files with the format keyword in name/folder should match multi-file specs
+      if (spec.multiFile && fileData.detectedFormat !== specKey) {
+        continue; // Skip this spec - file doesn't belong to this multi-file format
+      }
+
       // Check if file format is supported
       const fileFormat = fileData.format;
       if (!spec.formats.includes(fileFormat)) continue;
@@ -760,10 +767,11 @@ function findMatchingFormats(fileData, network = null, tier = null) {
  * Validate a file against a specific format spec
  * @param {Object} fileData - Analyzed file data
  * @param {Object} formatSpec - Format specification
- * @returns {{valid: boolean, issues: Array<string>}}
+ * @returns {{valid: boolean, issues: Array<string>, warnings: Array<string>}}
  */
 function validateFileForFormat(fileData, formatSpec) {
   const issues = [];
+  const warnings = [];
 
   // Special handling for HTML5 banners
   if (fileData.isHTML5 && fileData.html5Validation) {
@@ -781,14 +789,16 @@ function validateFileForFormat(fileData, formatSpec) {
       issues.push(`Velikost souboru ${fileSize}KB překračuje limit ${sizeLimit}KB (${Math.round(sizeLimit * toleranceMultiplier)}KB s 5% tolerancí)`);
     }
 
-    // Add HTML5 validation issues
+    // Add HTML5 validation issues as WARNINGS (not blocking errors)
+    // These are policy violations but don't prevent export for internal systems
     if (!fileData.html5Validation.valid) {
-      issues.push(...fileData.html5Validation.issues);
+      warnings.push(...fileData.html5Validation.issues);
     }
 
     return {
-      valid: issues.length === 0,
-      issues: issues
+      valid: issues.length === 0, // Only critical issues (dimensions, size) block validation
+      issues: issues,
+      warnings: warnings
     };
   }
 
@@ -804,13 +814,13 @@ function validateFileForFormat(fileData, formatSpec) {
     issues.push(`Formát ${fileFormat} není povolen (povoleno: ${formatSpec.formats.join(', ')})`);
   }
 
-  // Check size limit (with 5% tolerance)
+  // Check size limit (with 5% tolerance) - SIZE IS NOW A WARNING, NOT A BLOCKING ERROR
   const sizeLimit = formatSpec.maxSize;
   const fileSize = fileData.sizeKB;
   const toleranceMultiplier = 1.05; // 5% tolerance for file size
 
   if (fileSize > sizeLimit * toleranceMultiplier) {
-    issues.push(`Velikost souboru ${fileSize}KB překračuje limit ${sizeLimit}KB (${Math.round(sizeLimit * toleranceMultiplier)}KB s 5% tolerancí)`);
+    warnings.push(`Velikost souboru ${fileSize}KB překračuje limit ${sizeLimit}KB (${Math.round(sizeLimit * toleranceMultiplier)}KB s 5% tolerancí)`);
   }
 
   // Check color space
@@ -820,7 +830,8 @@ function validateFileForFormat(fileData, formatSpec) {
 
   return {
     valid: issues.length === 0,
-    issues: issues
+    issues: issues,
+    warnings: warnings
   };
 }
 
@@ -843,27 +854,41 @@ function detectMultiFileFormats(allFiles) {
     return fileName.includes('uncover') || folderPath.includes('uncover');
   });
 
-  if (uncoverFiles.length >= 2) {
+  // Group by folder FIRST to prevent mixing files from different folders
+  const uncoverByFolder = {};
+  for (const file of uncoverFiles) {
+    const key = file.folderPath || 'root';
+    if (!uncoverByFolder[key]) {
+      uncoverByFolder[key] = [];
+    }
+    uncoverByFolder[key].push(file);
+  }
+
+  // Then create pairs within each folder
+  for (const folderKey in uncoverByFolder) {
+    const files = uncoverByFolder[folderKey];
     // Group in pairs
-    for (let i = 0; i < uncoverFiles.length - 1; i += 2) {
+    for (let i = 0; i < files.length - 1; i += 2) {
       multiFileGroups.push({
         format: 'branding-uncover',
         network: 'SOS',
-        files: [uncoverFiles[i], uncoverFiles[i + 1]],
+        files: [files[i], files[i + 1]],
         complete: true,
         requiredCount: 2,
-        roles: ['cover', 'uncover']
+        roles: ['cover', 'uncover'],
+        folderPath: folderKey  // Store folder path for filtering
       });
     }
     // If odd number, last one is incomplete
-    if (uncoverFiles.length % 2 === 1) {
+    if (files.length % 2 === 1) {
       multiFileGroups.push({
         format: 'branding-uncover',
         network: 'SOS',
-        files: [uncoverFiles[uncoverFiles.length - 1]],
+        files: [files[files.length - 1]],
         complete: false,
         requiredCount: 2,
-        roles: ['cover', 'uncover']
+        roles: ['cover', 'uncover'],
+        folderPath: folderKey  // Store folder path for filtering
       });
     }
   }
@@ -909,7 +934,8 @@ function detectMultiFileFormats(allFiles) {
         files: files,
         complete: true,
         requiredCount: 4,
-        roles: ['banner', 'banner', 'banner', 'banner']
+        roles: ['banner', 'banner', 'banner', 'banner'],
+        folderPath: folderKey  // Store folder path for filtering
       });
     } else {
       // Incomplete Spincube set
@@ -919,7 +945,8 @@ function detectMultiFileFormats(allFiles) {
         files: files,
         complete: false,
         requiredCount: 4,
-        roles: ['banner', 'banner', 'banner', 'banner']
+        roles: ['banner', 'banner', 'banner', 'banner'],
+        folderPath: folderKey  // Store folder path for filtering
       });
     }
   }
@@ -967,7 +994,8 @@ function detectMultiFileFormats(allFiles) {
         files: files,
         complete: true,
         requiredCount: 4,
-        roles: ['side1', 'side2', 'side3', 'side4']
+        roles: ['side1', 'side2', 'side3', 'side4'],
+        folderPath: folderKey  // Store folder path for filtering
       });
     } else if (files.length === 2) {
       // 2 images can be used twice for Spinner
@@ -978,7 +1006,8 @@ function detectMultiFileFormats(allFiles) {
         complete: true,
         requiredCount: 2,
         roles: ['side1', 'side2'],
-        notes: 'Using 2 images (will be used twice)'
+        notes: 'Using 2 images (will be used twice)',
+        folderPath: folderKey  // Store folder path for filtering
       });
     } else {
       // Incomplete Spinner set
@@ -988,7 +1017,8 @@ function detectMultiFileFormats(allFiles) {
         files: files,
         complete: false,
         requiredCount: 4,
-        roles: ['side1', 'side2', 'side3', 'side4']
+        roles: ['side1', 'side2', 'side3', 'side4'],
+        folderPath: folderKey  // Store folder path for filtering
       });
     }
   }
@@ -997,54 +1027,77 @@ function detectMultiFileFormats(allFiles) {
   const triggers = allFiles.filter(f => f.dimensions === '461x100');
   const banners = allFiles.filter(f => f.dimensions === '1100x500');
 
-  if (triggers.length > 0 && banners.length > 0) {
-    // Pair triggers with banners
-    const pairCount = Math.min(triggers.length, banners.length);
+  // Group by folder FIRST to prevent mixing files from different folders
+  const triggersByFolder = {};
+  const bannersByFolder = {};
+
+  for (const trigger of triggers) {
+    const key = trigger.folderPath || 'root';
+    if (!triggersByFolder[key]) {
+      triggersByFolder[key] = [];
+    }
+    triggersByFolder[key].push(trigger);
+  }
+
+  for (const banner of banners) {
+    const key = banner.folderPath || 'root';
+    if (!bannersByFolder[key]) {
+      bannersByFolder[key] = [];
+    }
+    bannersByFolder[key].push(banner);
+  }
+
+  // Get all unique folder keys
+  const allFolderKeys = new Set([...Object.keys(triggersByFolder), ...Object.keys(bannersByFolder)]);
+
+  // Pair triggers with banners within each folder
+  for (const folderKey of allFolderKeys) {
+    const folderTriggers = triggersByFolder[folderKey] || [];
+    const folderBanners = bannersByFolder[folderKey] || [];
+    const pairCount = Math.min(folderTriggers.length, folderBanners.length);
+
+    // Create complete pairs
     for (let i = 0; i < pairCount; i++) {
       multiFileGroups.push({
         format: 'exclusive-desktop',
         network: 'HP_EXCLUSIVE',
-        files: [triggers[i], banners[i]],
+        files: [folderTriggers[i], folderBanners[i]],
         complete: true,
         requiredCount: 2,
-        roles: ['trigger', 'banner']
+        roles: ['trigger', 'banner'],
+        folderPath: folderKey  // Store folder path for filtering
       });
     }
-    // If unpaired triggers or banners, mark as incomplete
-    if (triggers.length > banners.length) {
-      for (let i = pairCount; i < triggers.length; i++) {
+
+    // If unpaired triggers, mark as incomplete
+    if (folderTriggers.length > pairCount) {
+      for (let i = pairCount; i < folderTriggers.length; i++) {
         multiFileGroups.push({
           format: 'exclusive-desktop',
           network: 'HP_EXCLUSIVE',
-          files: [triggers[i]],
+          files: [folderTriggers[i]],
           complete: false,
           requiredCount: 2,
-          roles: ['trigger', 'banner']
+          roles: ['trigger', 'banner'],
+          folderPath: folderKey  // Store folder path for filtering
         });
       }
     }
-    if (banners.length > triggers.length) {
-      for (let i = pairCount; i < banners.length; i++) {
+
+    // If unpaired banners, mark as incomplete
+    if (folderBanners.length > pairCount) {
+      for (let i = pairCount; i < folderBanners.length; i++) {
         multiFileGroups.push({
           format: 'exclusive-desktop',
           network: 'HP_EXCLUSIVE',
-          files: [banners[i]],
+          files: [folderBanners[i]],
           complete: false,
           requiredCount: 2,
-          roles: ['trigger', 'banner']
+          roles: ['trigger', 'banner'],
+          folderPath: folderKey  // Store folder path for filtering
         });
       }
     }
-  } else if (triggers.length > 0 || banners.length > 0) {
-    // Only one type, incomplete
-    multiFileGroups.push({
-      format: 'exclusive-desktop',
-      network: 'HP_EXCLUSIVE',
-      files: [...triggers, ...banners],
-      complete: false,
-      requiredCount: 2,
-      roles: ['trigger', 'banner']
-    });
   }
 
   return multiFileGroups;

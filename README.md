@@ -47,7 +47,7 @@ Přetáhněte bannery, složky nebo ZIP soubory do upload zóny. Nástroj automa
 Zobrazí kompatibilní systémy pro každý banner s detaily:
 - Počet validních bannerů
 - Počet kampaňových assetů
-- Seznam všech umístění
+- Seznam všech formátů
 - Tooltips s podporovanými formáty
 
 ### 3. Nastavení exportu (Krok 3)

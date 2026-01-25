@@ -169,23 +169,28 @@ function checkJPEGColorSpace(arrayBuffer) {
 /**
  * Determine file format type
  * @param {File} file - File object
- * @returns {string} File type: 'image', 'zip', or 'unknown'
+ * @returns {string} File type: 'image', 'html', 'zip', or 'unknown'
  */
 function getFileFormat(file) {
-  const extension = file.name.split('.').pop().toLowerCase();
+  const extension = FileTypeHelpers.getExtension(file.name);
   const mimeType = file.type.toLowerCase();
 
-  // Check if it's an image
-  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif'].includes(extension) || mimeType.startsWith('image/')) {
-    return 'image';
+  // Check if it's an image (use centralized constants)
+  if (FileTypeHelpers.isImageExtension(extension) || mimeType.startsWith(FILE_TYPES.MIME_TYPES.IMAGE_PREFIX)) {
+    return FILE_TYPES.TYPES.IMAGE;
+  }
+
+  // Check if it's an HTML file (NEWLY ADDED)
+  if (FileTypeHelpers.isHTMLExtension(extension) || FILE_TYPES.MIME_TYPES.HTML.includes(mimeType)) {
+    return FILE_TYPES.TYPES.HTML;
   }
 
   // Check if it's a ZIP file
-  if (extension === 'zip' || mimeType === 'application/zip' || mimeType === 'application/x-zip-compressed') {
-    return 'zip';
+  if (FileTypeHelpers.isArchiveExtension(extension) || FILE_TYPES.MIME_TYPES.ZIP.includes(mimeType)) {
+    return FILE_TYPES.TYPES.ZIP;
   }
 
-  return 'unknown';
+  return FILE_TYPES.TYPES.UNKNOWN;
 }
 
 /**

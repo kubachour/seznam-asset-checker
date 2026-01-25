@@ -5,7 +5,7 @@
 // GLOBAL STATE
 // =============================================================================
 
-const APP_VERSION = 'v1.4.0'; // Major UX improvements, URL generation fixes, export enhancements, ZIP explorer, folder context display
+const APP_VERSION = 'v1.5.2'; // Group Step 4 banners by format + Fix UTM URL auto-update in Step 5
 
 const appState = {
   currentStep: 1,
@@ -150,9 +150,11 @@ async function readDirectoryRecursive(directoryEntry, parentPath = '') {
     if (entry.isFile) {
       try {
         const file = await getFileFromEntry(entry);
-        // Only include image files
+        // Accept images, HTML files, and ZIPs (use centralized constants)
         const fileType = getFileFormat(file);
-        if (fileType === 'image') {
+        if (fileType === FILE_TYPES.TYPES.IMAGE ||
+            fileType === FILE_TYPES.TYPES.HTML ||
+            fileType === FILE_TYPES.TYPES.ZIP) {
           // Store folder path for system detection
           file.folderPath = currentPath;
           files.push(file);
@@ -293,7 +295,46 @@ function setupEventListeners() {
       updateExportPreview();
     });
   }
+
+  // Step 5: Auto-update export previews when form fields change
+  setupExportFormListeners();
 }
+
+/**
+ * Simple debounce helper to avoid excessive updates while typing
+ */
+let exportPreviewTimeout = null;
+function debouncedUpdateExportPreviews() {
+  if (exportPreviewTimeout) {
+    clearTimeout(exportPreviewTimeout);
+  }
+  exportPreviewTimeout = setTimeout(() => {
+    updateAllExportPreviews();
+  }, 300);
+}
+
+/**
+ * Set up event listeners for export settings form fields
+ * Automatically updates URL previews when user types
+ */
+function setupExportFormListeners() {
+  const campaignNameInput = document.getElementById('campaignName');
+  const landingURLInput = document.getElementById('landingURL');
+  const utmContentInput = document.getElementById('utmContent');
+  const contentVariantsInput = document.getElementById('contentVariantsList');
+
+  if (campaignNameInput) {
+    campaignNameInput.addEventListener('input', debouncedUpdateExportPreviews);
+  }
+  if (landingURLInput) {
+    landingURLInput.addEventListener('input', debouncedUpdateExportPreviews);
+  }
+  if (utmContentInput) {
+    utmContentInput.addEventListener('input', debouncedUpdateExportPreviews);
+  }
+  if (contentVariantsInput) {
+    contentVariantsInput.addEventListener('input', debouncedUpdateExportPreviews);
+  }
 
 // =============================================================================
 // NAVIGATION
@@ -484,6 +525,31 @@ function unlockTableDataFields() {
 }
 
 function goToStep(stepNumber) {
+  // Validation guards - prevent navigation without required data
+  if (stepNumber === 2 && appState.uploadedFiles.length === 0) {
+    alert('Nejprve nahrajte soubory v kroku 1');
+    return;
+  }
+
+  if (stepNumber === 3 && Object.keys(appState.validationResults).length === 0) {
+    alert('Nejprve spusťte validaci v kroku 2 (tlačítko "Zkontrolovat kompatibilitu")');
+    return;
+  }
+
+  if (stepNumber === 4 && Object.keys(appState.networkStats).length === 0) {
+    alert('Nejprve dokončete validaci v kroku 3');
+    return;
+  }
+
+  if (stepNumber === 5) {
+    // Check if networks are selected (campaign name is checked at export time, not navigation)
+    const hasSelectedNetworks = appState.selectedNetworks.some(n => n.enabled);
+    if (!hasSelectedNetworks) {
+      alert('Nejprve vyberte alespoň jeden systém pro export v kroku 4');
+      return;
+    }
+  }
+
   // Hide all sections
   const sections = document.querySelectorAll('.section');
   sections.forEach(section => section.classList.remove('active'));
@@ -1216,6 +1282,66 @@ function detectSystemFromPath(folderPath) {
   return null;
 }
 
+/**
+ * Detect specific format from folder path (e.g., branding-scratcher, spincube, etc.)
+ * This prevents files from different formats but same dimensions from being mixed
+ * @param {string} folderPath - Full folder path
+ * @returns {string|null} Detected format name or null
+ */
+function detectFormatFromPath(folderPath) {
+  if (!folderPath) return null;
+
+  const pathLower = folderPath.toLowerCase();
+
+  // Define format patterns to detect (order matters - check more specific patterns first)
+  const formatPatterns = [
+    { pattern: 'branding scratcher', format: 'branding-scratcher' },
+    { pattern: 'branding-scratcher', format: 'branding-scratcher' },
+    { pattern: 'branding_scratcher', format: 'branding-scratcher' },
+    { pattern: 'brandingscratcher', format: 'branding-scratcher' },
+    { pattern: 'scratcher', format: 'branding-scratcher' },
+
+    { pattern: 'branding uncover', format: 'branding-uncover' },
+    { pattern: 'branding-uncover', format: 'branding-uncover' },
+    { pattern: 'branding_uncover', format: 'branding-uncover' },
+    { pattern: 'brandinguncover', format: 'branding-uncover' },
+    { pattern: 'uncover', format: 'branding-uncover' },
+
+    { pattern: 'branding sklik', format: 'branding-sklik' },
+    { pattern: 'branding-sklik', format: 'branding-sklik' },
+    { pattern: 'branding_sklik', format: 'branding-sklik' },
+
+    { pattern: 'spincube', format: 'spincube' },
+    { pattern: 'spin cube', format: 'spincube' },
+    { pattern: 'spin-cube', format: 'spincube' },
+    { pattern: 'spin_cube', format: 'spincube' },
+
+    { pattern: 'spinner', format: 'spinner' },
+
+    { pattern: 'exclusive desktop', format: 'exclusive-desktop' },
+    { pattern: 'exclusive-desktop', format: 'exclusive-desktop' },
+    { pattern: 'exclusive_desktop', format: 'exclusive-desktop' },
+    { pattern: 'exclusivedesktop', format: 'exclusive-desktop' },
+
+    { pattern: 'vanocni', format: 'vanocni' },
+    { pattern: 'vanoce', format: 'vanocni' },
+    { pattern: 'vánoční', format: 'vanocni' },
+    { pattern: 'vánoce', format: 'vanocni' },
+
+    { pattern: 'obecna', format: 'obecna' },
+    { pattern: 'obecná', format: 'obecna' }
+  ];
+
+  // Check each pattern
+  for (const { pattern, format } of formatPatterns) {
+    if (pathLower.includes(pattern)) {
+      return format;
+    }
+  }
+
+  return null;
+}
+
 // =============================================================================
 // CAMPAIGN TABLE PARSER
 // =============================================================================
@@ -1571,33 +1697,39 @@ async function extractImagesFromZIP(zipFile, depth = 0, parentPath = '') {
           imageFiles.push(...nestedFiles);
         }
       }
-      // Check if it's an image file
-      else if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif'].includes(extension)) {
+      // Check if it's a supported file (use centralized helper)
+      else if (FileTypeHelpers.isSupportedExtension(extension)) {
         // Extract file as blob
         const blob = await zipEntry.async('blob');
 
+        // Determine correct MIME type based on extension
+        let mimeType = 'application/octet-stream';
+        if (FileTypeHelpers.isImageExtension(extension)) {
+          mimeType = `image/${extension === 'jpg' ? 'jpeg' : extension}`;
+        } else if (FileTypeHelpers.isHTMLExtension(extension)) {
+          mimeType = 'text/html';
+        }
+
         // Create a File object from the blob
-        const file = new File([blob], baseName, {
-          type: `image/${extension === 'jpg' ? 'jpeg' : extension}`
-        });
+        const file = new File([blob], baseName, { type: mimeType });
 
         // Store folder path for system detection
         file.folderPath = folderPath;
 
         imageFiles.push(file);
-        console.log(`Extracted image: ${baseName} from ${folderPath || 'root'}`);
+        console.log(`Extracted ${extension.toUpperCase()} file: ${baseName} from ${folderPath || 'root'}`);
       }
       else {
-        // Skip non-image files
-        console.log(`Skipping non-image file: ${filename}`);
+        // Skip unsupported files
+        console.log(`Skipping unsupported file: ${filename}`);
       }
     }
 
     console.log(`Total images extracted at depth ${depth}: ${imageFiles.length}`);
     return imageFiles;
   } catch (error) {
-    console.error('Error extracting ZIP file:', error);
-    throw error;
+    console.warn('Error extracting ZIP file:', error);
+    return []; // Return empty array instead of throwing
   }
 }
 
@@ -1621,9 +1753,13 @@ async function handleFileUpload(files) {
   for (const file of files) {
     const fileType = getFileFormat(file);
 
-    if (fileType === 'image') {
+    if (fileType === FILE_TYPES.TYPES.IMAGE) {
       filesToAnalyze.push(file);
-    } else if (fileType === 'zip') {
+    } else if (fileType === FILE_TYPES.TYPES.HTML) {
+      // NEWLY ADDED: Process standalone HTML files
+      filesToAnalyze.push(file);
+      console.log(`Detected standalone HTML file: ${file.name}`);
+    } else if (fileType === FILE_TYPES.TYPES.ZIP) {
       // Check if this is an HTML5 banner ZIP
       const isHTML5 = typeof HTML5Validator !== 'undefined' &&
         (HTML5Validator.isHTML5BannerByName(file.name) || await HTML5Validator.isHTML5ZIP(file));
@@ -1644,8 +1780,8 @@ async function handleFileUpload(files) {
           filesToAnalyze.push(...extractedImages);
           console.log(`Extracted ${extractedImages.length} image(s) from ${file.name}`);
         } catch (error) {
-          console.error(`Failed to extract ${file.name}:`, error);
-          alert(`Error extracting ${file.name}: ${error.message}`);
+          console.warn(`Failed to extract ${file.name}:`, error);
+          // Continue processing other files instead of showing error to user
         }
       }
     } else {
@@ -1677,10 +1813,11 @@ async function handleFileUpload(files) {
       }
     });
 
-    // Detect assigned system from folder path for each file
+    // Detect assigned system and format from folder path for each file
     for (const fileData of analyzed) {
       const folderPath = fileData.file?.folderPath || '';
       fileData.assignedSystem = detectSystemFromPath(folderPath);
+      fileData.assignedFormat = detectFormatFromPath(folderPath);
       fileData.folderPath = folderPath;
     }
 
@@ -1696,9 +1833,11 @@ async function handleFileUpload(files) {
   // Show uploaded files list
   displayUploadedFiles();
 
-  // Enable analyze button
-  if (analyzeBtn && appState.uploadedFiles.length > 0) {
-    analyzeBtn.disabled = false;
+  // Enable analyze button (both top and bottom)
+  const analyzeBtnTop = document.getElementById('analyzeBtnTop');
+  if (appState.uploadedFiles.length > 0) {
+    if (analyzeBtn) analyzeBtn.disabled = false;
+    if (analyzeBtnTop) analyzeBtnTop.disabled = false;
   }
 }
 
@@ -1750,6 +1889,51 @@ function generateThumbnailHTML(file, size = 40) {
   }
 }
 
+/**
+ * Generate unified HTML for a file list item with thumbnail, name, dimensions, and optional metadata
+ * @param {Object} file - File object with name, dimensions, sizeKB, folderPath, etc.
+ * @param {Object} options - Display options
+ * @param {string} options.borderColor - Border color (default: '#e5e7eb')
+ * @param {string} options.bgColor - Background color (default: 'white')
+ * @param {number} options.thumbnailSize - Thumbnail size in pixels (default: 50)
+ * @param {Array} options.warnings - Array of warning messages to display
+ * @param {string} options.additionalInfo - Additional info/error message to display
+ * @param {string} options.additionalInfoColor - Color for additional info (default: '#ef4444')
+ * @returns {string} HTML for a file list item
+ */
+function generateFileItemHTML(file, options = {}) {
+  const {
+    borderColor = '#e5e7eb',
+    bgColor = 'white',
+    thumbnailSize = 50,
+    warnings = [],
+    additionalInfo = '',
+    additionalInfoColor = '#ef4444'
+  } = options;
+
+  const hasWarnings = warnings && warnings.length > 0;
+
+  return `
+    <li style="margin-bottom: 8px; display: flex; align-items: center; gap: 10px; padding: 8px; background: ${bgColor}; border-radius: 6px; border: 1px solid ${borderColor};">
+      ${generateThumbnailHTML(file, thumbnailSize)}
+      <div style="flex: 1;">
+        <div><strong>${file.name}</strong></div>
+        <div style="font-size: 12px; color: #6b7280;">${file.dimensions} • ${file.sizeKB}KB</div>
+        ${file.folderPath ? `<div style="font-size: 11px; color: #6b7280; font-family: monospace;">📁 ${file.folderPath}</div>` : ''}
+        ${additionalInfo ? `<div style="font-size: 12px; color: ${additionalInfoColor};">⚠️ ${additionalInfo}</div>` : ''}
+        ${hasWarnings ? `
+          <div style="margin-top: 6px; padding: 6px; background: #fef3c7; border-radius: 4px; border: 1px solid #fcd34d;">
+            <div style="font-size: 11px; font-weight: 600; color: #92400e; margin-bottom: 3px;">⚠️ Porušení zásad (může projít interními systémy):</div>
+            <ul style="margin: 0; padding-left: 16px; font-size: 11px; color: #78350f;">
+              ${warnings.map(w => `<li style="margin: 2px 0;">${w}</li>`).join('')}
+            </ul>
+          </div>
+        ` : ''}
+      </div>
+    </li>
+  `;
+}
+
 function displayUploadedFiles() {
   const uploadedFilesSection = document.getElementById('uploadedFiles');
   if (!uploadedFilesSection) return;
@@ -1788,7 +1972,9 @@ function displayUploadedFiles() {
             ${filesInFolder.map(({ file, index }) => {
               const thumbnailHTML = generateThumbnailHTML(file);
 
-              const isZIP = file.name.toLowerCase().endsWith('.zip');
+              const isZIP = file.name.toLowerCase().endsWith('.zip') ||
+                            file.fileType === 'html5' ||
+                            file.isHTML5;
               return `
                 <li class="uploaded-file-item" style="padding: 10px 15px; border-bottom: 1px solid #f3f4f6; background: white;">
                   <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -1829,7 +2015,9 @@ function displayUploadedFiles() {
         <ul class="uploaded-files-list" style="list-style: none; padding: 0; margin: 0; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
           ${rootFiles.map(({ file, index }) => {
             const thumbnailHTML = generateThumbnailHTML(file);
-            const isZIP = file.name.toLowerCase().endsWith('.zip');
+            const isZIP = file.name.toLowerCase().endsWith('.zip') ||
+                          file.fileType === 'html5' ||
+                          file.isHTML5;
 
             return `
               <li class="uploaded-file-item" style="padding: 10px; border-bottom: 1px solid #f3f4f6;">
@@ -1894,9 +2082,12 @@ function removeFile(index) {
   appState.uploadedFiles.splice(index, 1);
   displayUploadedFiles();
 
+  // Disable analyze button (both top and bottom) when no files
   const analyzeBtn = document.getElementById('analyzeBtn');
-  if (analyzeBtn && appState.uploadedFiles.length === 0) {
-    analyzeBtn.disabled = true;
+  const analyzeBtnTop = document.getElementById('analyzeBtnTop');
+  if (appState.uploadedFiles.length === 0) {
+    if (analyzeBtn) analyzeBtn.disabled = true;
+    if (analyzeBtnTop) analyzeBtnTop.disabled = true;
   }
 }
 
@@ -2019,6 +2210,17 @@ async function validateCompatibility() {
   // Build membership map to track which files are active vs excess
   const groupMembership = buildMultiFileGroupMembership(appState.multiFileGroups);
 
+  // If campaign table exists, extract required dimensions for filtering
+  const requiredDimensions = new Set();
+  if (appState.campaignRequirements && appState.campaignRequirements.length > 0) {
+    for (const requirement of appState.campaignRequirements) {
+      for (const dimension of requirement.dimensions) {
+        requiredDimensions.add(dimension);
+      }
+    }
+    console.log('Campaign table filter active. Only validating dimensions:', Array.from(requiredDimensions));
+  }
+
   // Build compatibility matrix for each file
   appState.validationResults = {};
   appState.networkStats = {};
@@ -2070,6 +2272,11 @@ async function validateCompatibility() {
         const matches = findMatchingFormats(fileData, network, tier);
 
         for (const match of matches) {
+          // If campaign table exists, only validate dimensions that are in the requirements
+          if (requiredDimensions.size > 0 && fileData.dimensions && !requiredDimensions.has(fileData.dimensions)) {
+            continue; // Skip this file - dimensions not in campaign table
+          }
+
           const validation = validateFileForFormat(fileData, match.spec);
 
           if (validation.valid && match.sizeValid) {
@@ -2078,7 +2285,8 @@ async function validateCompatibility() {
               tier: tier,
               format: match.specKey,
               formatDisplay: match.formatDisplay,
-              spec: match.spec
+              spec: match.spec,
+              warnings: validation.warnings || [] // Include warnings if present
             });
           } else {
             // Only add to incompatible if format is allowed for this system
@@ -2098,6 +2306,11 @@ async function validateCompatibility() {
     if (!fileData.detectedFormat || isFormatAllowedForSystem(fileData.detectedFormat, 'HP_EXCLUSIVE')) {
       const exclusiveMatches = findMatchingFormats(fileData, 'HP_EXCLUSIVE', null);
       for (const match of exclusiveMatches) {
+        // If campaign table exists, only validate dimensions that are in the requirements
+        if (requiredDimensions.size > 0 && fileData.dimensions && !requiredDimensions.has(fileData.dimensions)) {
+          continue; // Skip this file - dimensions not in campaign table
+        }
+
         const validation = validateFileForFormat(fileData, match.spec);
 
         if (validation.valid && match.sizeValid) {
@@ -2106,7 +2319,8 @@ async function validateCompatibility() {
             tier: null,
             format: match.specKey,
             formatDisplay: match.formatDisplay,
-            spec: match.spec
+            spec: match.spec,
+            warnings: validation.warnings || []
           });
         } else {
           incompatible.push({
@@ -2124,6 +2338,11 @@ async function validateCompatibility() {
     if (!fileData.detectedFormat || isFormatAllowedForSystem(fileData.detectedFormat, 'GOOGLE_ADS')) {
       const googleAdsMatches = findMatchingFormats(fileData, 'GOOGLE_ADS', null);
       for (const match of googleAdsMatches) {
+        // If campaign table exists, only validate dimensions that are in the requirements
+        if (requiredDimensions.size > 0 && fileData.dimensions && !requiredDimensions.has(fileData.dimensions)) {
+          continue; // Skip this file - dimensions not in campaign table
+        }
+
         const validation = validateFileForFormat(fileData, match.spec);
 
         if (validation.valid && match.sizeValid) {
@@ -2132,7 +2351,8 @@ async function validateCompatibility() {
             tier: null,
             format: match.specKey,
             formatDisplay: match.formatDisplay,
-            spec: match.spec
+            spec: match.spec,
+            warnings: validation.warnings || []
           });
         } else {
           incompatible.push({
@@ -2172,6 +2392,47 @@ async function validateCompatibility() {
   // Calculate network stats
   calculateNetworkStats();
 
+  // Log detailed errors to console (once, after all validation)
+  if (totalIncompatible > 0) {
+    // Collect all error files from networkStats
+    const allErrorFiles = [];
+    for (const [network, tiers] of Object.entries(appState.networkStats)) {
+      for (const [tier, stats] of Object.entries(tiers)) {
+        if (stats.errorFiles && stats.errorFiles.length > 0) {
+          allErrorFiles.push(...stats.errorFiles);
+        }
+      }
+    }
+
+    // Group errors by filename
+    const errorsByFile = {};
+    for (const errorInfo of allErrorFiles) {
+      if (!errorsByFile[errorInfo.file]) {
+        errorsByFile[errorInfo.file] = [];
+      }
+      errorsByFile[errorInfo.file].push({
+        reason: errorInfo.reason,
+        tier: errorInfo.tier,
+        format: errorInfo.format,
+        network: errorInfo.network
+      });
+    }
+
+    // Log errors one by one
+    console.group('🔴 Validation Errors');
+    for (const [file, errors] of Object.entries(errorsByFile)) {
+      console.group(`📄 ${file}`);
+      for (let idx = 0; idx < errors.length; idx++) {
+        const err = errors[idx];
+        const tierLabel = err.tier ? ` [${err.tier} tier]` : '';
+        const formatLabel = err.format ? ` (${err.format})` : '';
+        console.error(`  Error ${idx + 1}${tierLabel}${formatLabel}: ${err.reason}`);
+      }
+      console.groupEnd();
+    }
+    console.groupEnd();
+  }
+
   // Check if campaign table exists
   if (appState.campaignRequirements.length > 0) {
     // Show Step 2: Table validation
@@ -2183,6 +2444,90 @@ async function validateCompatibility() {
     displayNetworkToggles();
     goToStep(3);
   }
+}
+
+/**
+ * Convert requirement name to format key for matching
+ * @param {string} name - Requirement name (e.g., "Branding Scratcher")
+ * @returns {string} Format key (e.g., "branding-scratcher")
+ */
+function requirementNameToFormatKey(name) {
+  if (!name) return null;
+  // Normalize: lowercase, replace spaces with hyphens
+  return name.toLowerCase().replace(/\s+/g, '-');
+}
+
+/**
+ * Find available files that could be assigned to a missing dimension
+ * @param {string} dimension - The missing dimension (e.g., "2000x1400")
+ * @param {string} requirementName - The requirement we want to assign to
+ * @returns {Array} - Files that match the dimension but are assigned elsewhere
+ */
+function findFilesForMissingDimension(dimension, requirementName) {
+  const targetFormatKey = requirementNameToFormatKey(requirementName);
+
+  return appState.uploadedFiles.filter(f => {
+    // Must match the dimension
+    if (f.dimensions !== dimension) return false;
+
+    // Skip if already assigned to this requirement
+    if (f.assignedFormat === targetFormatKey) return false;
+
+    return true;
+  });
+}
+
+/**
+ * Assign a file to a specific requirement format
+ * Called when user clicks "Přiřadit" button for a missing dimension
+ */
+function assignFileToRequirement(fileName, requirementName) {
+  const file = appState.uploadedFiles.find(f => f.name === fileName);
+  if (!file) return;
+
+  file.assignedFormat = requirementNameToFormatKey(requirementName);
+
+  // Re-validate and update display
+  validateAgainstCampaignTable();
+  displayTableValidation();
+}
+
+/**
+ * Build HTML for available files that can be assigned to a missing dimension
+ */
+function buildAssignableFilesHTML(dimension, requirementName) {
+  const availableFiles = findFilesForMissingDimension(dimension, requirementName);
+
+  if (availableFiles.length === 0) return '';
+
+  const filesHTML = availableFiles.map(file => {
+    const escapedName = file.name.replace(/'/g, "\\'");
+    const escapedReqName = requirementName.replace(/'/g, "\\'");
+    const folderInfo = file.folderPath ? `<span style="color: #6b7280; font-size: 11px;"> (${file.folderPath})</span>` : '';
+
+    return `
+      <li style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: white; border-radius: 6px; border: 1px solid #fde68a; margin-bottom: 6px;">
+        ${file.thumbnailUrl ? `<img src="${file.thumbnailUrl}" style="width: 40px; height: 40px; object-fit: contain; border-radius: 4px; background: #f3f4f6;">` : ''}
+        <div style="flex: 1; min-width: 0;">
+          <div style="font-weight: 500; color: #1f2937; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${file.name}${folderInfo}</div>
+          <div style="font-size: 11px; color: #6b7280;">${file.sizeKB}KB${file.assignedFormat ? ` • aktuálně: ${file.assignedFormat}` : ''}</div>
+        </div>
+        <button onclick="assignFileToRequirement('${escapedName}', '${escapedReqName}')"
+          style="background: #f59e0b; color: white; border: none; padding: 5px 12px; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap;">
+          Přiřadit
+        </button>
+      </li>
+    `;
+  }).join('');
+
+  return `
+    <div style="margin-top: 12px; padding: 12px; background: #fef3c7; border-radius: 6px; border: 1px solid #fde68a;">
+      <div style="font-weight: 600; color: #92400e; margin-bottom: 8px;">💡 Dostupné soubory k přiřazení (${dimension}):</div>
+      <ul style="margin: 0; padding: 0; list-style: none;">
+        ${filesHTML}
+      </ul>
+    </div>
+  `;
 }
 
 /**
@@ -2199,9 +2544,12 @@ function validateAgainstCampaignTable() {
       issues: []
     };
 
+    // Convert requirement name to format key for matching
+    const requirementFormatKey = requirementNameToFormatKey(requirement.name);
+
     // Check each dimension in requirement
     for (const dimension of requirement.dimensions) {
-      // Filter by dimension AND format type (HTML5 vs static)
+      // Filter by dimension AND format type (HTML5 vs static) AND assignedFormat
       const matchingFiles = appState.uploadedFiles.filter(f => {
         if (f.dimensions !== dimension) return false;
 
@@ -2210,6 +2558,25 @@ function validateAgainstCampaignTable() {
 
         // If requirement is static-only, accept only non-HTML5 files
         if (requirement.isStatic && f.isHTML5) return false;
+
+        // CRITICAL FIX: If file has assignedFormat, it must match the requirement
+        // This prevents files from "Branding uncover" appearing in "Branding Scratcher" section
+        if (f.assignedFormat) {
+          // Check if file's format matches requirement's format
+          // Allow match if requirement name contains the format key or vice versa
+          const reqNameLower = (requirement.name || '').toLowerCase();
+          const fileFormat = f.assignedFormat.toLowerCase();
+
+          // Direct match or contains match
+          const formatMatches = reqNameLower.includes(fileFormat.replace(/-/g, ' ')) ||
+                               reqNameLower.includes(fileFormat) ||
+                               fileFormat.includes(reqNameLower.replace(/\s+/g, '-')) ||
+                               requirementFormatKey === fileFormat;
+
+          if (!formatMatches) {
+            return false; // File belongs to a different format
+          }
+        }
 
         return true;
       });
@@ -2301,23 +2668,11 @@ function displayTableValidation() {
           <div style="margin-bottom: 12px;">
             <div style="font-weight: 600; color: #059669; margin-bottom: 8px;">✅ Nalezené bannery:</div>
             <ul style="margin: 0; padding-left: 0; list-style: none;">
-              ${result.found.map(f => {
-                const file = f.file;
-                const thumbnailURL = file.preview || (file.file ? createThumbnailURL(file.file) : '');
-                return `
-                  <li style="margin-bottom: 8px; display: flex; align-items: center; gap: 10px; padding: 8px; background: white; border-radius: 6px; border: 1px solid ${f.sizeValid ? '#bbf7d0' : '#fed7aa'};">
-                    ${thumbnailURL ? `
-                      <img src="${thumbnailURL}" alt="${file.name}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px; border: 1px solid #e5e7eb; flex-shrink: 0;">
-                    ` : ''}
-                    <div style="flex: 1;">
-                      <div><strong>${file.name}</strong></div>
-                      <div style="font-size: 12px; color: #6b7280;">${file.dimensions} • ${file.sizeKB}KB</div>
-                      ${file.folderPath ? `<div style="font-size: 11px; color: #9ca3af; font-family: monospace;">📁 ${file.folderPath}</div>` : ''}
-                      ${!f.sizeValid ? `<div style="font-size: 12px; color: #ef4444;">⚠️ ${f.sizeIssue}</div>` : ''}
-                    </div>
-                  </li>
-                `;
-              }).join('')}
+              ${result.found.map(f => generateFileItemHTML(f.file, {
+                borderColor: f.sizeValid ? '#bbf7d0' : '#fed7aa',
+                bgColor: 'white',
+                additionalInfo: !f.sizeValid ? f.sizeIssue : ''
+              })).join('')}
             </ul>
           </div>
         ` : ''}
@@ -2329,6 +2684,7 @@ function displayTableValidation() {
             <div style="color: #991b1b; font-size: 14px;">
               ${result.missing.join(', ')}
             </div>
+            ${result.missing.map(dim => buildAssignableFilesHTML(dim, req.name)).join('')}
           </div>
         ` : ''}
       </div>
@@ -2343,20 +2699,10 @@ function displayTableValidation() {
           ℹ️ Navíc (není v tabulce)
         </h3>
         <ul style="margin: 0; padding-left: 0; list-style: none;">
-          ${extraFiles.map(file => {
-            const thumbnailURL = file.preview || (file.file ? createThumbnailURL(file.file) : '');
-            return `
-              <li style="margin-bottom: 8px; display: flex; align-items: center; gap: 10px; padding: 8px; background: white; border-radius: 6px; border: 1px solid #bfdbfe;">
-                ${thumbnailURL ? `
-                  <img src="${thumbnailURL}" alt="${file.name}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px; border: 1px solid #e5e7eb; flex-shrink: 0;">
-                ` : ''}
-                <div style="flex: 1;">
-                  <div><strong>${file.name}</strong></div>
-                  <div style="font-size: 12px; color: #6b7280;">${file.dimensions} • ${file.sizeKB}KB</div>
-                </div>
-              </li>
-            `;
-          }).join('')}
+          ${extraFiles.map(file => generateFileItemHTML(file, {
+            borderColor: '#bfdbfe',
+            bgColor: 'white'
+          })).join('')}
         </ul>
       </div>
     `;
@@ -2517,7 +2863,7 @@ function displayNetworkToggles() {
                 <span class="valid-icon" style="font-size: 20px;">✓</span>
                 <span class="valid-count" style="font-weight: 700; color: #10b981;">${stats.eligibleAssets} validních assetů</span>
               </span>
-              <span class="placements-count" style="color: #6b7280;"> (${stats.totalPlacements} umístění)</span>
+              <span class="placements-count" style="color: #6b7280;"> (${stats.totalPlacements} formátů)</span>
               ${hasErrors ? `
                 <span class="error-assets-count" style="margin-left: 15px; display: inline-flex; align-items: center; gap: 5px;">
                   <span class="error-icon" style="font-size: 20px;">⚠</span>
@@ -2548,7 +2894,6 @@ function displayNetworkToggles() {
 
             ${hasEligibleAssets ? `
               <div id="validDetails_${stats.network}" style="display: none; margin-top: 12px; padding: 12px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; font-size: 13px;">
-                <div style="font-weight: 600; color: #166534; margin-bottom: 8px;">Validní bannery pro tento systém:</div>
                 ${buildValidDetails(stats.network)}
               </div>
             ` : ''}
@@ -2674,80 +3019,202 @@ function createThumbnailURL(file) {
 }
 
 function buildExportPreviewWithCheckboxes(network) {
-  // Get all valid files for this network (across all tiers)
-  const assignedFiles = [];
-  const otherValidFiles = [];
-
-  for (const [fileName, validation] of Object.entries(appState.validationResults)) {
-    const matches = validation.compatible.filter(c => c.network === network);
-    if (matches.length > 0) {
-      const fileInfo = {
-        fileName,
-        file: validation.file
-      };
-
-      // Check if file is assigned to this network based on folder name
-      if (validation.file.assignedSystem === network) {
-        assignedFiles.push(fileInfo);
-      } else {
-        otherValidFiles.push(fileInfo);
+  // Build membership map from appState.multiFileGroups to track which files belong to multi-file formats
+  const groupMembership = new Map(); // fileName -> groupInfo
+  if (appState.multiFileGroups) {
+    for (const group of appState.multiFileGroups) {
+      if (group.network === network) {
+        for (const file of group.files) {
+          groupMembership.set(file.name, {
+            format: group.format,
+            folderPath: group.folderPath,
+            groupSize: group.files.length,
+            complete: group.complete,
+            requiredCount: group.requiredCount
+          });
+        }
       }
     }
   }
 
-  if (assignedFiles.length === 0 && otherValidFiles.length === 0) {
+  // Group files by format (placement)
+  const formatGroups = new Map(); // formatKey -> { spec, files[] }
+  const processedFiles = new Set(); // Track which files we've added
+
+  for (const [fileName, validation] of Object.entries(appState.validationResults)) {
+    const matches = validation.compatible.filter(c => c.network === network);
+    if (matches.length === 0) continue;
+
+    const file = validation.file;
+
+    // Check if file is part of a multi-file group
+    const groupInfo = groupMembership.get(fileName);
+
+    // Skip files that are part of INCOMPLETE multi-file groups
+    if (groupInfo && !groupInfo.complete) {
+      continue;
+    }
+
+    // If file has assignedFormat, check if it matches any of the compatible formats
+    if (file.assignedFormat) {
+      const compatibleFormats = matches.map(m => m.format);
+      const formatMatches = compatibleFormats.includes(file.assignedFormat);
+      if (!formatMatches) {
+        continue;
+      }
+    }
+
+    // Add file to each matching format
+    for (const match of matches) {
+      const formatKey = match.format;
+      const spec = match.spec;
+
+      if (!formatGroups.has(formatKey)) {
+        formatGroups.set(formatKey, {
+          formatKey,
+          spec,
+          files: [],
+          multiFileGroup: null
+        });
+      }
+
+      const fileInfo = {
+        fileName,
+        file,
+        isAssigned: file.assignedSystem === network,
+        multiFileGroup: groupInfo
+      };
+
+      // For multi-file formats, store the group info at format level
+      if (groupInfo) {
+        formatGroups.get(formatKey).multiFileGroup = groupInfo;
+      }
+
+      // Avoid duplicates (same file in same format)
+      const formatFileKey = `${formatKey}_${fileName}`;
+      if (!processedFiles.has(formatFileKey)) {
+        formatGroups.get(formatKey).files.push(fileInfo);
+        processedFiles.add(formatFileKey);
+      }
+    }
+  }
+
+  if (formatGroups.size === 0) {
     return '<p style="color: #6b7280;">Žádné bannery k exportu</p>';
   }
 
+  // Sort formats: multi-file formats first (branding, spincube, spinner), then by name
+  const sortedFormats = Array.from(formatGroups.values()).sort((a, b) => {
+    const richMediaOrder = ['branding', 'branding-scratcher', 'branding-uncover', 'branding-videopanel', 'branding-sklik', 'interscroller', 'mobilni-interscroller', 'spincube', 'spinner', 'inarticle', 'nativni-inzerat', 'exclusive'];
+    const orderA = richMediaOrder.findIndex(rm => a.formatKey.includes(rm));
+    const orderB = richMediaOrder.findIndex(rm => b.formatKey.includes(rm));
+
+    if (orderA !== -1 && orderB !== -1) return orderA - orderB;
+    if (orderA !== -1) return -1;
+    if (orderB !== -1) return 1;
+
+    return a.spec.name.localeCompare(b.spec.name);
+  });
+
   let html = '';
 
-  // Show assigned banners first
-  if (assignedFiles.length > 0) {
-    html += '<div class="banner-list-section" style="margin-bottom: 12px;">';
-    html += '<div style="font-weight: 600; color: #059669; margin-bottom: 8px; font-size: 13px;">📂 Přiřazené bannery:</div>';
-    html += '<ul style="margin: 0; padding-left: 0; list-style: none; color: #166534;">';
-    for (const fileData of assignedFiles) {
-      const checkboxId = `banner_${network}_${fileData.fileName.replace(/[^a-zA-Z0-9]/g, '_')}`;
-      html += `
-        <li style="margin-bottom: 8px; display: flex; align-items: center; gap: 10px;">
-          <input type="checkbox" id="${checkboxId}" checked onchange="updateBannerSelection('${network}', '${fileData.fileName}')" style="width: 18px; height: 18px; cursor: pointer; accent-color: #10b981; flex-shrink: 0;">
-          ${generateThumbnailHTML(fileData.file, 60)}
-          <label for="${checkboxId}" style="cursor: pointer; flex: 1;">
-            <div><strong>${fileData.fileName}</strong> <span style="color: #6b7280; font-size: 12px;">(${fileData.file.dimensions})</span></div>
-            ${fileData.file.folderPath ? `<div style="font-size: 11px; color: #9ca3af; font-family: monospace; margin-top: 2px;">📁 ${fileData.file.folderPath}</div>` : ''}
-          </label>
-        </li>`;
-    }
-    html += '</ul>';
-    html += '</div>';
-  }
+  for (const formatGroup of sortedFormats) {
+    const { formatKey, spec, files, multiFileGroup } = formatGroup;
+    const fileCount = files.length;
 
-  // Show other compatible banners
-  if (otherValidFiles.length > 0) {
-    html += '<div class="banner-list-section" style="margin-bottom: 12px;">';
-    // If there are no assigned files, just show "Bannery k exportu" instead of "Další kompatibilní bannery"
-    const headline = assignedFiles.length === 0
-      ? 'Bannery k exportu:'
-      : '✓ Další kompatibilní bannery:';
-    html += `<div style="font-weight: 600; color: #059669; margin-bottom: 8px; font-size: 13px;">${headline}</div>`;
-    html += '<ul style="margin: 0; padding-left: 0; list-style: none; color: #166534;">';
-    for (const fileData of otherValidFiles) {
-      const checkboxId = `banner_${network}_${fileData.fileName.replace(/[^a-zA-Z0-9]/g, '_')}`;
+    // Count assigned vs other files
+    const assignedCount = files.filter(f => f.isAssigned).length;
+
+    // Format dimensions display
+    const dimensionsText = spec.dimensions.join(', ');
+    const maxSizeText = spec.maxSize ? `max ${spec.maxSize}KB` : '';
+
+    // Determine if this is a multi-file format
+    const isMultiFile = multiFileGroup !== null;
+    const borderColor = isMultiFile ? '#3b82f6' : '#10b981';
+    const bgColor = isMultiFile ? '#eff6ff' : '#f0fdf4';
+    const headerBgColor = isMultiFile ? '#dbeafe' : '#dcfce7';
+
+    // Build format header
+    const formatId = `exportFormat_${network}_${formatKey}`.replace(/[^a-zA-Z0-9_]/g, '_');
+
+    html += `
+      <div style="margin-bottom: 12px; border: 1px solid ${borderColor}; border-radius: 8px; overflow: hidden;">
+        <div onclick="toggleExportFormatDetails('${formatId}')" style="display: flex; align-items: center; gap: 10px; padding: 12px; background: ${headerBgColor}; cursor: pointer; user-select: none;">
+          <span id="${formatId}_icon" style="font-size: 12px; color: #6b7280;">▶</span>
+          <div style="flex: 1;">
+            <div style="font-weight: 600; color: #1f2937; font-size: 14px;">
+              ${isMultiFile ? '🔗 ' : ''}${spec.name}
+            </div>
+            <div style="font-size: 12px; color: #6b7280; margin-top: 2px;">
+              ${dimensionsText}${maxSizeText ? ' • ' + maxSizeText : ''}
+              ${isMultiFile ? ` • ${multiFileGroup.groupSize}/${multiFileGroup.requiredCount} souborů` : ''}
+              ${assignedCount > 0 ? ` • 📂 ${assignedCount} přiřazených` : ''}
+            </div>
+          </div>
+          <div style="font-weight: 700; color: ${borderColor}; font-size: 14px;">${fileCount}</div>
+        </div>
+        <div id="${formatId}_details" style="display: none; padding: 12px; background: ${bgColor};">
+          <ul style="margin: 0; padding-left: 0; list-style: none;">
+    `;
+
+    // Sort files: assigned first, then by folder, then filename
+    files.sort((a, b) => {
+      // Assigned files first
+      if (a.isAssigned !== b.isAssigned) return a.isAssigned ? -1 : 1;
+      // Then by folder
+      const folderA = a.file.folderPath || '';
+      const folderB = b.file.folderPath || '';
+      if (folderA !== folderB) return folderA.localeCompare(folderB);
+      // Then by filename
+      return a.fileName.localeCompare(b.fileName);
+    });
+
+    for (const fileInfo of files) {
+      const checkboxId = `banner_${network}_${fileInfo.fileName.replace(/[^a-zA-Z0-9]/g, '_')}`;
+      const assignedBadge = fileInfo.isAssigned
+        ? '<span style="background: #059669; color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 8px;">přiřazeno</span>'
+        : '';
+
       html += `
-        <li style="margin-bottom: 8px; display: flex; align-items: center; gap: 10px;">
-          <input type="checkbox" id="${checkboxId}" checked onchange="updateBannerSelection('${network}', '${fileData.fileName}')" style="width: 18px; height: 18px; cursor: pointer; accent-color: #10b981; flex-shrink: 0;">
-          ${generateThumbnailHTML(fileData.file, 60)}
+        <li style="margin-bottom: 8px; display: flex; align-items: center; gap: 10px; padding: 8px; background: white; border-radius: 6px; border: 1px solid ${fileInfo.isAssigned ? '#bbf7d0' : '#e5e7eb'};">
+          <input type="checkbox" id="${checkboxId}" checked onchange="updateBannerSelection('${network}', '${fileInfo.fileName}')" style="width: 18px; height: 18px; cursor: pointer; accent-color: #10b981; flex-shrink: 0;">
+          ${generateThumbnailHTML(fileInfo.file, 60)}
           <label for="${checkboxId}" style="cursor: pointer; flex: 1;">
-            <div><strong>${fileData.fileName}</strong> <span style="color: #6b7280; font-size: 12px;">(${fileData.file.dimensions})</span></div>
-            ${fileData.file.folderPath ? `<div style="font-size: 11px; color: #9ca3af; font-family: monospace; margin-top: 2px;">📁 ${fileData.file.folderPath}</div>` : ''}
+            <div><strong>${fileInfo.fileName}</strong> <span style="color: #6b7280; font-size: 12px;">(${fileInfo.file.dimensions})</span>${assignedBadge}</div>
+            ${fileInfo.file.folderPath ? `<div style="font-size: 11px; color: #9ca3af; font-family: monospace; margin-top: 2px;">📁 ${fileInfo.file.folderPath}</div>` : ''}
           </label>
         </li>`;
     }
-    html += '</ul>';
-    html += '</div>';
+
+    html += `
+          </ul>
+        </div>
+      </div>
+    `;
   }
 
   return html;
+}
+
+/**
+ * Toggle export format details visibility in Step 4
+ */
+function toggleExportFormatDetails(formatId) {
+  const details = document.getElementById(`${formatId}_details`);
+  const icon = document.getElementById(`${formatId}_icon`);
+
+  if (!details) return;
+
+  const isVisible = details.style.display !== 'none';
+
+  if (isVisible) {
+    details.style.display = 'none';
+    if (icon) icon.textContent = '▶';
+  } else {
+    details.style.display = 'block';
+    if (icon) icon.textContent = '▼';
+  }
 }
 
 function buildExportPreview(network) {
@@ -2873,98 +3340,196 @@ function sortFilesByFormatFolderName(files) {
 }
 
 function buildValidDetails(network) {
-  // Get all valid files for this network (across all tiers)
-  const assignedFiles = [];
-  const otherValidFiles = [];
-
-  for (const [fileName, validation] of Object.entries(appState.validationResults)) {
-    const matches = validation.compatible.filter(c => c.network === network);
-    if (matches.length > 0) {
-      const file = validation.file;
-      const fileInfo = {
-        fileName,
-        file,
-        assignedSystem: file.assignedSystem
-      };
-
-      // Check if file is assigned to this network based on folder name
-      if (file.assignedSystem === network) {
-        assignedFiles.push(fileInfo);
-      } else {
-        otherValidFiles.push(fileInfo);
+  // Build membership map from appState.multiFileGroups to track which files belong to multi-file formats
+  const groupMembership = new Map(); // fileName -> groupInfo
+  if (appState.multiFileGroups) {
+    for (const group of appState.multiFileGroups) {
+      if (group.network === network) {
+        for (const file of group.files) {
+          groupMembership.set(file.name, {
+            format: group.format,
+            folderPath: group.folderPath,
+            groupSize: group.files.length,
+            complete: group.complete,
+            requiredCount: group.requiredCount
+          });
+        }
       }
     }
   }
 
-  // Sort files by Format → Folder → Filename
-  sortFilesByFormatFolderName(assignedFiles);
-  sortFilesByFormatFolderName(otherValidFiles);
+  // Group files by placement (format key)
+  const placementGroups = new Map(); // formatKey -> { spec, files[] }
+  const processedFiles = new Set(); // Track which files we've added
 
-  if (assignedFiles.length === 0 && otherValidFiles.length === 0) {
+  for (const [fileName, validation] of Object.entries(appState.validationResults)) {
+    const matches = validation.compatible.filter(c => c.network === network);
+    if (matches.length === 0) continue;
+
+    const file = validation.file;
+
+    // Check if file is part of a multi-file group
+    const groupInfo = groupMembership.get(fileName);
+
+    // Skip files that are part of INCOMPLETE multi-file groups
+    if (groupInfo && !groupInfo.complete) {
+      continue;
+    }
+
+    // CRITICAL FIX: If file has assignedFormat, check if it matches any of the compatible formats
+    if (file.assignedFormat) {
+      const compatibleFormats = matches.map(m => m.format);
+      const formatMatches = compatibleFormats.includes(file.assignedFormat);
+      if (!formatMatches) {
+        continue;
+      }
+    }
+
+    // Collect all warnings from matching placements
+    const allWarnings = [];
+    for (const match of matches) {
+      if (match.warnings && match.warnings.length > 0) {
+        allWarnings.push(...match.warnings);
+      }
+    }
+    const uniqueWarnings = [...new Set(allWarnings)];
+
+    // Add file to each matching placement
+    for (const match of matches) {
+      const formatKey = match.format;
+      const spec = match.spec;
+
+      if (!placementGroups.has(formatKey)) {
+        placementGroups.set(formatKey, {
+          formatKey,
+          spec,
+          files: [],
+          multiFileGroup: null
+        });
+      }
+
+      const fileInfo = {
+        fileName,
+        file,
+        warnings: uniqueWarnings,
+        multiFileGroup: groupInfo
+      };
+
+      // For multi-file formats, store the group info at placement level
+      if (groupInfo) {
+        placementGroups.get(formatKey).multiFileGroup = groupInfo;
+      }
+
+      // Avoid duplicates (same file in same placement)
+      const placementFileKey = `${formatKey}_${fileName}`;
+      if (!processedFiles.has(placementFileKey)) {
+        placementGroups.get(formatKey).files.push(fileInfo);
+        processedFiles.add(placementFileKey);
+      }
+    }
+  }
+
+  if (placementGroups.size === 0) {
     return '<p style="color: #6b7280;">Žádné validní bannery</p>';
   }
 
+  // Sort placements: multi-file formats first (branding, spincube, spinner), then by name
+  const sortedPlacements = Array.from(placementGroups.values()).sort((a, b) => {
+    const richMediaOrder = ['branding', 'branding-scratcher', 'branding-uncover', 'branding-videopanel', 'branding-sklik', 'interscroller', 'mobilni-interscroller', 'spincube', 'spinner', 'inarticle', 'nativni-inzerat', 'exclusive'];
+    const orderA = richMediaOrder.findIndex(rm => a.formatKey.includes(rm));
+    const orderB = richMediaOrder.findIndex(rm => b.formatKey.includes(rm));
+
+    if (orderA !== -1 && orderB !== -1) return orderA - orderB;
+    if (orderA !== -1) return -1;
+    if (orderB !== -1) return 1;
+
+    return a.spec.name.localeCompare(b.spec.name);
+  });
+
   let html = '';
 
-  // Show assigned banners first
-  if (assignedFiles.length > 0) {
-    html += '<div style="margin-bottom: 12px;">';
-    html += '<div style="font-weight: 600; color: #059669; margin-bottom: 8px; font-size: 14px;">📂 Přiřazené bannery:</div>';
-    html += '<ul style="margin: 0; padding-left: 0; list-style: none; color: #166534;">';
-    for (const fileInfo of assignedFiles) {
-      html += `
-        <li style="margin-bottom: 8px; display: flex; align-items: center; gap: 10px; padding: 8px; background: #f0fdf4; border-radius: 6px; border: 1px solid #bbf7d0;">
-          ${generateThumbnailHTML(fileInfo.file, 60)}
+  for (const placement of sortedPlacements) {
+    const { formatKey, spec, files, multiFileGroup } = placement;
+    const fileCount = files.length;
+
+    // Format dimensions display
+    const dimensionsText = spec.dimensions.join(', ');
+    const maxSizeText = spec.maxSize ? `max ${spec.maxSize}KB` : '';
+
+    // Determine if this is a multi-file format
+    const isMultiFile = multiFileGroup !== null;
+    const borderColor = isMultiFile ? '#3b82f6' : '#10b981';
+    const bgColor = isMultiFile ? '#eff6ff' : '#f0fdf4';
+    const headerBgColor = isMultiFile ? '#dbeafe' : '#dcfce7';
+
+    // Build placement header
+    const placementId = `placement_${network}_${formatKey}`.replace(/[^a-zA-Z0-9_]/g, '_');
+
+    html += `
+      <div style="margin-bottom: 12px; border: 1px solid ${borderColor}; border-radius: 8px; overflow: hidden;">
+        <div onclick="togglePlacementDetails('${placementId}')" style="display: flex; align-items: center; gap: 10px; padding: 12px; background: ${headerBgColor}; cursor: pointer; user-select: none;">
+          <span id="${placementId}_icon" style="font-size: 12px; color: #6b7280;">▶</span>
           <div style="flex: 1;">
-            <div><strong>${fileInfo.fileName}</strong></div>
-            <div style="color: #166534; font-size: 12px;">${fileInfo.file.dimensions} • ${fileInfo.file.sizeKB} KB</div>
-            ${fileInfo.file.folderPath ? `<div style="font-size: 11px; color: #6b7280; font-family: monospace;">📁 ${fileInfo.file.folderPath}</div>` : ''}
+            <div style="font-weight: 600; color: #1f2937; font-size: 14px;">
+              ${isMultiFile ? '🔗 ' : ''}${spec.name}
+            </div>
+            <div style="font-size: 12px; color: #6b7280; margin-top: 2px;">
+              ${dimensionsText}${maxSizeText ? ' • ' + maxSizeText : ''}
+              ${isMultiFile ? ` • ${multiFileGroup.groupSize}/${multiFileGroup.requiredCount} souborů` : ''}
+            </div>
           </div>
-        </li>`;
-    }
-    html += '</ul>';
-    html += '</div>';
-  }
+          <div style="font-weight: 700; color: ${borderColor}; font-size: 14px;">${fileCount}</div>
+        </div>
+        <div id="${placementId}_details" style="display: none; padding: 12px; background: ${bgColor};">
+          <ul style="margin: 0; padding-left: 0; list-style: none;">
+    `;
 
-  // Show other compatible banners
-  if (otherValidFiles.length > 0) {
-    html += '<div style="margin-bottom: 12px;">';
-    html += '<div style="font-weight: 600; color: #059669; margin-bottom: 8px; font-size: 14px;">✓ Další kompatibilní bannery:</div>';
-    html += '<ul style="margin: 0; padding-left: 0; list-style: none; color: #166534;">';
-    for (const fileInfo of otherValidFiles) {
-      html += `
-        <li style="margin-bottom: 8px; display: flex; align-items: center; gap: 10px; padding: 8px; background: #f0fdf4; border-radius: 6px; border: 1px solid #bbf7d0;">
-          ${generateThumbnailHTML(fileInfo.file, 60)}
-          <div style="flex: 1;">
-            <div><strong>${fileInfo.fileName}</strong></div>
-            <div style="color: #166534; font-size: 12px;">${fileInfo.file.dimensions} • ${fileInfo.file.sizeKB} KB</div>
-            ${fileInfo.file.folderPath ? `<div style="font-size: 11px; color: #6b7280; font-family: monospace;">📁 ${fileInfo.file.folderPath}</div>` : ''}
-          </div>
-        </li>`;
-    }
-    html += '</ul>';
-    html += '</div>';
-  }
+    // Sort files by folder then filename
+    files.sort((a, b) => {
+      const folderA = a.file.folderPath || '';
+      const folderB = b.file.folderPath || '';
+      if (folderA !== folderB) return folderA.localeCompare(folderB);
+      return a.fileName.localeCompare(b.fileName);
+    });
 
-  // Show missing files
-  const allFiles = new Set(Object.keys(appState.validationResults));
-  const validFileNames = new Set([...assignedFiles, ...otherValidFiles].map(f => f.fileName));
-  const missingFiles = [...allFiles].filter(f => !validFileNames.has(f));
-
-  if (missingFiles.length > 0) {
-    html += '<div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #bbf7d0;">';
-    html += '<div style="font-weight: 600; color: #dc2626; margin-bottom: 6px;">Chybějící nebo nevalidní bannery:</div>';
-    html += '<ul style="margin: 0; padding-left: 20px; color: #dc2626;">';
-    for (const fileName of missingFiles) {
-      const validation = appState.validationResults[fileName];
-      const file = validation.file;
-      html += `<li style="margin-bottom: 4px;">${fileName} <span style="font-size: 12px; color: #6b7280;">(${file.dimensions})</span></li>`;
+    for (const fileInfo of files) {
+      const hasWarnings = fileInfo.warnings && fileInfo.warnings.length > 0;
+      html += generateFileItemHTML(fileInfo.file, {
+        borderColor: hasWarnings ? '#fb923c' : '#bbf7d0',
+        bgColor: hasWarnings ? '#fff7ed' : 'white',
+        thumbnailSize: 60,
+        warnings: fileInfo.warnings
+      });
     }
-    html += '</ul>';
-    html += '</div>';
+
+    html += `
+          </ul>
+        </div>
+      </div>
+    `;
   }
 
   return html;
+}
+
+/**
+ * Toggle placement details visibility
+ */
+function togglePlacementDetails(placementId) {
+  const details = document.getElementById(`${placementId}_details`);
+  const icon = document.getElementById(`${placementId}_icon`);
+
+  if (!details) return;
+
+  const isVisible = details.style.display !== 'none';
+
+  if (isVisible) {
+    details.style.display = 'none';
+    if (icon) icon.textContent = '▶';
+  } else {
+    details.style.display = 'block';
+    if (icon) icon.textContent = '▼';
+  }
 }
 
 function buildErrorDetails(stats) {
@@ -2985,34 +3550,41 @@ function buildErrorDetails(stats) {
     });
   }
 
-  // Log errors to console for developers
-  console.group('🔴 Validation Errors');
-  for (const [file, errors] of Object.entries(errorsByFile)) {
-    console.group(`📄 ${file}`);
-    errors.forEach((err, idx) => {
-      const tierLabel = err.tier ? ` [${err.tier} tier]` : '';
-      const formatLabel = err.format ? ` (${err.format})` : '';
-      console.error(`  Error ${idx + 1}${tierLabel}${formatLabel}: ${err.reason}`);
-    });
-    console.groupEnd();
-  }
-  console.groupEnd();
+  // NOTE: Console logging moved to validateCompatibility() to avoid duplicate logs
 
-  let html = '<ul style="margin: 0; padding-left: 20px; color: #7f1d1d;">';
-  for (const [file, errors] of Object.entries(errorsByFile)) {
-    html += `<li style="margin-bottom: 8px;"><strong>${file}</strong><br/>`;
+  let html = '<ul style="margin: 0; padding-left: 0; list-style: none;">';
+  for (const [fileName, errors] of Object.entries(errorsByFile)) {
+    // Look up the file object from validationResults
+    const validation = appState.validationResults[fileName];
+    const fileObj = validation ? validation.file : null;
 
-    // Show all error reasons (deduplicate identical messages)
-    const uniqueReasons = [...new Set(errors.map(e => e.reason))];
-    uniqueReasons.forEach((reason, idx) => {
-      // Find which tiers have this error
-      const tiersWithError = errors.filter(e => e.reason === reason).map(e => e.tier).filter(Boolean);
-      const tierLabel = tiersWithError.length > 0 ? ` <span style="font-size: 11px; color: #6b7280;">[${tiersWithError.join(', ')}]</span>` : '';
+    if (fileObj) {
+      // Build error message string
+      const uniqueReasons = [...new Set(errors.map(e => e.reason))];
+      const errorMessages = uniqueReasons.map(reason => {
+        const tiersWithError = errors.filter(e => e.reason === reason).map(e => e.tier).filter(Boolean);
+        const tierLabel = tiersWithError.length > 0 ? ` [${tiersWithError.join(', ')}]` : '';
+        return `• ${reason}${tierLabel}`;
+      });
 
-      html += `<span style="color: #991b1b; font-size: 12px; display: block; margin-top: ${idx > 0 ? '4px' : '2px'};">• ${reason}${tierLabel}</span>`;
-    });
-
-    html += '</li>';
+      // Use generateFileItemHTML with red border and error messages
+      html += generateFileItemHTML(fileObj, {
+        borderColor: '#fca5a5',
+        bgColor: '#fee2e2',
+        thumbnailSize: 60,
+        additionalInfo: errorMessages.join('\n')
+      });
+    } else {
+      // Fallback if file object not found
+      html += `<li style="margin-bottom: 8px;"><strong>${fileName}</strong><br/>`;
+      const uniqueReasons = [...new Set(errors.map(e => e.reason))];
+      uniqueReasons.forEach((reason, idx) => {
+        const tiersWithError = errors.filter(e => e.reason === reason).map(e => e.tier).filter(Boolean);
+        const tierLabel = tiersWithError.length > 0 ? ` <span style="font-size: 11px; color: #6b7280;">[${tiersWithError.join(', ')}]</span>` : '';
+        html += `<span style="color: #991b1b; font-size: 12px; display: block; margin-top: ${idx > 0 ? '4px' : '2px'};">• ${reason}${tierLabel}</span>`;
+      });
+      html += '</li>';
+    }
   }
   html += '</ul>';
 
@@ -3085,6 +3657,7 @@ function updateSelectedNetworks() {
       // Store with tier information
       appState.selectedNetworks.push({
         network: network,
+        enabled: true,
         selectedBanners: selectedBanners,
         tiers: tiers
       });
@@ -4094,3 +4667,5 @@ window.exportAllNetworksConsolidatedXLSX = exportAllNetworksConsolidatedXLSX;
 window.exportCSV = exportCSV;
 window.toggleZIPContents = toggleZIPContents;
 window.toggleFolder = toggleFolder;
+window.togglePlacementDetails = togglePlacementDetails;
+window.toggleExportFormatDetails = toggleExportFormatDetails;
