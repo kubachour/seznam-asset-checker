@@ -54,6 +54,12 @@
       border-bottom: 3px solid #3b82f6;
     }
 
+    .network-note {
+      margin-bottom: 15px;
+      color: #6b7280;
+      font-size: 14px;
+    }
+
     table {
       width: 100%;
       border-collapse: collapse;
@@ -124,31 +130,15 @@
       color: #92400e;
     }
 
+    .device.app {
+      background: #fae8ff;
+      color: #86198f;
+    }
+
     .notes {
       font-size: 12px;
       color: #6b7280;
       font-style: italic;
-    }
-
-    .tier-badge {
-      display: inline-block;
-      padding: 2px 6px;
-      background: #dbeafe;
-      color: #1e40af;
-      border-radius: 3px;
-      font-size: 11px;
-      font-weight: 600;
-      margin-left: 5px;
-    }
-
-    .tier-badge.high {
-      background: #fef3c7;
-      color: #92400e;
-    }
-
-    .tier-badge.low {
-      background: #e0e7ff;
-      color: #3730a3;
     }
 
     .back-link {
@@ -163,6 +153,67 @@
       text-decoration: underline;
     }
 
+    .info-box {
+      background: #fef3c7;
+      border: 1px solid #fbbf24;
+      border-left: 4px solid #f59e0b;
+      border-radius: 6px;
+      padding: 20px;
+      margin-bottom: 30px;
+    }
+
+    .info-box h3 {
+      margin: 0 0 10px 0;
+      color: #92400e;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .info-box p {
+      margin-bottom: 10px;
+      color: #78350f;
+      font-size: 14px;
+    }
+
+    .info-box ul {
+      margin-left: 20px;
+      color: #78350f;
+      font-size: 14px;
+    }
+
+    .info-box code {
+      background: rgba(0,0,0,0.1);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 13px;
+    }
+
+    .sos-warning {
+      background: #fef3c7;
+      border: 1px solid #fbbf24;
+      border-left: 4px solid #f59e0b;
+      border-radius: 6px;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+
+    .sos-warning p {
+      margin: 0;
+      color: #78350f;
+      font-size: 14px;
+    }
+
+    .sos-warning p:first-child {
+      font-weight: 600;
+    }
+
+    .sos-warning p:last-child {
+      margin-top: 8px;
+      font-size: 13px;
+    }
+
     footer {
       margin-top: 40px;
       padding-top: 20px;
@@ -171,24 +222,34 @@
       color: #6b7280;
       font-size: 14px;
     }
+
+    footer a {
+      color: #3b82f6;
+    }
+
+    #html5-formats-list, #html5-other-systems {
+      margin-left: 20px;
+      color: #78350f;
+      font-size: 13px;
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <a href="index.html" class="back-link">← Zpět na Creative Validator</a>
 
-    <h1>📊 Přehled reklamních formátů</h1>
+    <h1>Přehled reklamních formátů</h1>
     <p class="subtitle">Kompletní seznam podporovaných formátů pro všechny reklamní systémy Seznam.cz a Google Ads</p>
 
-    <div class="info-box" style="background: #fef3c7; border: 1px solid #fbbf24; border-left: 4px solid #f59e0b; border-radius: 6px; padding: 20px; margin-bottom: 30px;">
-      <h3 style="margin: 0 0 10px 0; color: #92400e; font-size: 18px; display: flex; align-items: center; gap: 8px;">
+    <div class="info-box">
+      <h3>
         <span style="font-size: 24px;">⚡</span>
         HTML5 bannery - Požadavky
       </h3>
-      <p style="margin-bottom: 10px; color: #78350f; font-size: 14px;">
+      <p>
         HTML5 bannery jsou podporovány ve formátu ZIP s následujícími požadavky:
       </p>
-      <ul style="margin-left: 20px; color: #78350f; font-size: 14px;">
+      <ul>
         <li>Maximálně 40 souborů v archivu</li>
         <li>Maximálně 2 úrovně podadresářů</li>
         <li>Přesně 1 HTML soubor v kořenovém adresáři</li>
@@ -198,498 +259,252 @@
         <li>Povolené CDN: fonts.googleapis.com, cdnjs.cloudflare.com, code.jquery.com, cdn.jsdelivr.net, ajax.googleapis.com</li>
         <li>Doporučený formát názvu: <code>HTML5_WIDTHxHEIGHT_name.zip</code></li>
       </ul>
-      <p style="margin-top: 15px; color: #78350f; font-size: 14px; font-weight: 600;">
+      <p style="margin-top: 10px; font-size: 13px; color: #92400e;">
+        <strong>Poznámka:</strong> Překročení velikosti souboru a některá pravidla HTML5 validace se zobrazují jako <strong>varování</strong> (nikoliv chyba) a umožňují export. Pouze nesprávné rozměry blokují validaci.
+      </p>
+      <p style="margin-top: 15px; font-weight: 600;">
         ✅ Formáty s HTML5 podporou:
       </p>
-      <ul style="margin-left: 20px; color: #78350f; font-size: 13px;">
-        <li><strong>Sklik:</strong> Mobilní Interscroller (720×1280)</li>
-        <li><strong>SOS:</strong> Branding (2560×1440), Mobilní Interscroller (720×1280)</li>
-        <li><strong>HP Exclusive:</strong> Desktop Banner (1100×500), Wallpaper Mobile (480×300), Square Premium Mobile (480×480)</li>
-      </ul>
-      <p style="margin-top: 15px; color: #78350f; font-size: 14px; font-weight: 600;">
-        ❌ Systémy bez HTML5 podpory:
-      </p>
-      <ul style="margin-left: 20px; color: #78350f; font-size: 13px;">
-        <li><strong>Adform:</strong> Pouze JPG, PNG, GIF</li>
-        <li><strong>Onegar:</strong> Pouze JPG, PNG, GIF</li>
+      <ul id="html5-formats-list">
+        <!-- Dynamically generated -->
       </ul>
     </div>
 
-    <!-- SKLIK -->
-    <div class="network-section">
-      <h2 class="network-title">Sklik</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Formát</th>
-            <th>Rozměry</th>
-            <th>Max velikost</th>
-            <th>Formáty souborů</th>
-            <th>Zařízení</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td class="format-name">Wallpaper</td>
-            <td class="dimensions">480×300</td>
-            <td class="file-size">250 KB</td>
-            <td class="formats">JPG, PNG, GIF</td>
-            <td><span class="device">Desktop/Mobil</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Leaderboard</td>
-            <td class="dimensions">970×210</td>
-            <td class="file-size">250 KB</td>
-            <td class="formats">JPG, PNG, GIF</td>
-            <td><span class="device desktop">Desktop</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Sponzor služby</td>
-            <td class="dimensions">300×250</td>
-            <td class="file-size">250 KB</td>
-            <td class="formats">JPG, PNG, GIF</td>
-            <td><span class="device desktop">Desktop</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Rectangle</td>
-            <td class="dimensions">970×310</td>
-            <td class="file-size">250 KB</td>
-            <td class="formats">JPG, PNG, GIF</td>
-            <td><span class="device desktop">Desktop</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Skyscraper</td>
-            <td class="dimensions">300×600</td>
-            <td class="file-size">250 KB</td>
-            <td class="formats">JPG, PNG, GIF</td>
-            <td><span class="device desktop">Desktop</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Mobilní square</td>
-            <td class="dimensions">300×300, 480×480</td>
-            <td class="file-size">250 KB</td>
-            <td class="formats">JPG, PNG, GIF</td>
-            <td><span class="device mobile">Mobil</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Kombi / Nativní inzerát</td>
-            <td class="dimensions">1200×628, 1200×1200, 600×314, 300×300</td>
-            <td class="file-size">1024 KB</td>
-            <td class="formats">JPG, PNG, GIF, WebP, AVIF</td>
-            <td><span class="device">Desktop/Mobil</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Leaderboard middle</td>
-            <td class="dimensions">728×90</td>
-            <td class="file-size">250 KB</td>
-            <td class="formats">JPG, PNG, GIF</td>
-            <td><span class="device desktop">Desktop</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Mobilní leaderboard</td>
-            <td class="dimensions">320×100</td>
-            <td class="file-size">250 KB</td>
-            <td class="formats">JPG, PNG, GIF</td>
-            <td><span class="device mobile">Mobil</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Skyscraper sticky</td>
-            <td class="dimensions">160×600, 300×600</td>
-            <td class="file-size">250 KB</td>
-            <td class="formats">JPG, PNG, GIF</td>
-            <td><span class="device desktop">Desktop</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Mobilní Interscroller</td>
-            <td class="dimensions">720×1280</td>
-            <td class="file-size">250 KB</td>
-            <td class="formats">JPG, PNG, GIF, WebP, AVIF, HTML5</td>
-            <td><span class="device mobile">Mobil</span></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- SOS -->
-    <div class="network-section">
-      <h2 class="network-title">SOS (Seznam Oblíbené Služby)</h2>
-
-      <div class="info-box" style="background: #fef3c7; border: 1px solid #fbbf24; border-left: 4px solid #f59e0b; border-radius: 6px; padding: 15px; margin-bottom: 20px;">
-        <p style="margin: 0; color: #78350f; font-size: 14px; font-weight: 600;">
-          ⚠️ Důležité: SOS podporuje POUZE rich media a in-article formáty
-        </p>
-        <p style="margin: 8px 0 0 0; color: #78350f; font-size: 13px;">
-          Pro standardní bannery (300×250, 300×600, 480×300, atd.) použijte systémy ADFORM, ONEGAR nebo SKLIK.
-        </p>
-      </div>
-
-      <table>
-        <thead>
-          <tr>
-            <th>Formát</th>
-            <th>Rozměry</th>
-            <th>Max velikost</th>
-            <th>Formáty souborů</th>
-            <th>Zařízení</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td class="format-name">Branding</td>
-            <td class="dimensions">2560×1440</td>
-            <td class="file-size">600 KB</td>
-            <td class="formats">JPG, PNG, GIF, HTML5</td>
-            <td><span class="device desktop">Desktop</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Branding Scratcher</td>
-            <td class="dimensions">2560×1440</td>
-            <td class="file-size">600 KB</td>
-            <td class="formats">JPG</td>
-            <td><span class="device desktop">Desktop</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Branding Uncover</td>
-            <td class="dimensions">2560×1440 (2 soubory)</td>
-            <td class="file-size">600 KB</td>
-            <td class="formats">JPG, PNG, GIF</td>
-            <td><span class="device desktop">Desktop</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Branding Videopanel</td>
-            <td class="dimensions">2560×1440</td>
-            <td class="file-size">600 KB</td>
-            <td class="formats">JPG, PNG, GIF, HTML5</td>
-            <td><span class="device desktop">Desktop</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Branding Sklik</td>
-            <td class="dimensions">2000×1400</td>
-            <td class="file-size">500 KB</td>
-            <td class="formats">JPG, PNG, GIF, WebP, AVIF</td>
-            <td><span class="device desktop">Desktop</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Spinner (Skyscraper)</td>
-            <td class="dimensions">300×600 (4 soubory)</td>
-            <td class="file-size">250 KB</td>
-            <td class="formats">JPG, PNG, GIF</td>
-            <td><span class="device desktop">Desktop</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Spincube</td>
-            <td class="dimensions">480×480 (4 soubory)</td>
-            <td class="file-size">250 KB</td>
-            <td class="formats">JPG, PNG, GIF</td>
-            <td><span class="device mobile">Mobil</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Mobilní Interscroller</td>
-            <td class="dimensions">720×1280</td>
-            <td class="file-size">250 KB</td>
-            <td class="formats">JPG, PNG, GIF, WebP, AVIF, HTML5</td>
-            <td><span class="device mobile">Mobil</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Nativní inzerát (In-article)</td>
-            <td class="dimensions">640×480, 338×190, 400×300, 800×533, 1200×628, 1200×1200</td>
-            <td class="file-size">500 KB</td>
-            <td class="formats">JPG, PNG</td>
-            <td><span class="device">Desktop/Mobil</span></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- ADFORM -->
-    <div class="network-section">
-      <h2 class="network-title">Adform (RTB)</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Formát</th>
-            <th>Rozměry</th>
-            <th>Max velikost</th>
-            <th>Formáty souborů</th>
-            <th>Zařízení</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td class="format-name">Sponzor služby</td>
-            <td class="dimensions">300×250</td>
-            <td class="file-size">150 KB</td>
-            <td class="formats">JPG, PNG, GIF</td>
-            <td><span class="device desktop">Desktop</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Wallpaper</td>
-            <td class="dimensions">480×300</td>
-            <td class="file-size">150 KB</td>
-            <td class="formats">JPG, PNG, GIF</td>
-            <td><span class="device">Desktop/Mobil</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Leaderboard</td>
-            <td class="dimensions">970×210</td>
-            <td class="file-size">150 KB</td>
-            <td class="formats">JPG, PNG, GIF</td>
-            <td><span class="device desktop">Desktop</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Rectangle</td>
-            <td class="dimensions">970×310</td>
-            <td class="file-size">150 KB</td>
-            <td class="formats">JPG, PNG, GIF</td>
-            <td><span class="device desktop">Desktop</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Skyscraper</td>
-            <td class="dimensions">300×600</td>
-            <td class="file-size">150 KB</td>
-            <td class="formats">JPG, PNG, GIF</td>
-            <td><span class="device desktop">Desktop</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Mobilní square</td>
-            <td class="dimensions">300×300, 480×480</td>
-            <td class="file-size">150 KB</td>
-            <td class="formats">JPG, PNG, GIF</td>
-            <td><span class="device mobile">Mobil</span></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- ONEGAR -->
-    <div class="network-section">
-      <h2 class="network-title">Onegar (RTB)</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Formát</th>
-            <th>Rozměry</th>
-            <th>Max velikost</th>
-            <th>Formáty souborů</th>
-            <th>Zařízení</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td class="format-name">Wallpaper</td>
-            <td class="dimensions">480×300</td>
-            <td class="file-size">250 KB</td>
-            <td class="formats">JPG, PNG, GIF</td>
-            <td><span class="device">Desktop/Mobil</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Leaderboard</td>
-            <td class="dimensions">970×210</td>
-            <td class="file-size">250 KB</td>
-            <td class="formats">JPG, PNG, GIF</td>
-            <td><span class="device desktop">Desktop</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Sponzor služby</td>
-            <td class="dimensions">300×250</td>
-            <td class="file-size">250 KB</td>
-            <td class="formats">JPG, PNG, GIF</td>
-            <td><span class="device desktop">Desktop</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Rectangle</td>
-            <td class="dimensions">970×310</td>
-            <td class="file-size">250 KB</td>
-            <td class="formats">JPG, PNG, GIF</td>
-            <td><span class="device desktop">Desktop</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Skyscraper</td>
-            <td class="dimensions">300×600</td>
-            <td class="file-size">250 KB</td>
-            <td class="formats">JPG, PNG, GIF</td>
-            <td><span class="device desktop">Desktop</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Mobilní square</td>
-            <td class="dimensions">300×300, 480×480</td>
-            <td class="file-size">250 KB</td>
-            <td class="formats">JPG, PNG, GIF</td>
-            <td><span class="device mobile">Mobil</span></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- HP EXCLUSIVE -->
-    <div class="network-section">
-      <h2 class="network-title">HP Exclusive</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Formát</th>
-            <th>Rozměry</th>
-            <th>Max velikost</th>
-            <th>Formáty souborů</th>
-            <th>Zařízení</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td class="format-name">Exclusive Desktop - Trigger</td>
-            <td class="dimensions">461×100</td>
-            <td class="file-size">200 KB</td>
-            <td class="formats">JPG, PNG, GIF</td>
-            <td><span class="device desktop">Desktop</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Exclusive Desktop - Banner</td>
-            <td class="dimensions">1100×500</td>
-            <td class="file-size">300 KB (Image), 1 MB (HTML5)</td>
-            <td class="formats">JPG, PNG, GIF, HTML5</td>
-            <td><span class="device desktop">Desktop</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Exclusive Wallpaper (Mobile)</td>
-            <td class="dimensions">480×300</td>
-            <td class="file-size">200 KB (Image), 300 KB (HTML5)</td>
-            <td class="formats">JPG, PNG, GIF, HTML5</td>
-            <td><span class="device mobile">Mobil</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Exclusive Square Premium (Mobile)</td>
-            <td class="dimensions">480×480</td>
-            <td class="file-size">200 KB (Image), 300 KB (HTML5)</td>
-            <td class="formats">JPG, PNG, GIF, HTML5</td>
-            <td><span class="device mobile">Mobil</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Exclusive Wallpaper (App)</td>
-            <td class="dimensions">480×300</td>
-            <td class="file-size">100 KB</td>
-            <td class="formats">JPG, PNG, GIF</td>
-            <td><span class="device mobile">Aplikace</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Exclusive Square Premium (App)</td>
-            <td class="dimensions">480×480</td>
-            <td class="file-size">100 KB</td>
-            <td class="formats">JPG, PNG, GIF</td>
-            <td><span class="device mobile">Aplikace</span></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- GOOGLE ADS -->
-    <div class="network-section">
-      <h2 class="network-title">Google Ads (Validace)</h2>
-      <p style="margin-bottom: 15px; color: #6b7280; font-size: 14px;">
-        Systém pouze pro validaci rozměrů a velikostí. Nepodporuje export s UTM parametry.
-      </p>
-      <table>
-        <thead>
-          <tr>
-            <th>Formát</th>
-            <th>Rozměry</th>
-            <th>Max velikost</th>
-            <th>Formáty souborů</th>
-            <th>Zařízení</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td class="format-name">Small Square</td>
-            <td class="dimensions">200×200</td>
-            <td class="file-size">150 KB</td>
-            <td class="formats">JPG, PNG, GIF</td>
-            <td><span class="device">Desktop/Mobil</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Square</td>
-            <td class="dimensions">250×250</td>
-            <td class="file-size">150 KB</td>
-            <td class="formats">JPG, PNG, GIF</td>
-            <td><span class="device">Desktop/Mobil</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Banner</td>
-            <td class="dimensions">468×60</td>
-            <td class="file-size">150 KB</td>
-            <td class="formats">JPG, PNG, GIF</td>
-            <td><span class="device">Desktop/Mobil</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Leaderboard</td>
-            <td class="dimensions">728×90</td>
-            <td class="file-size">150 KB</td>
-            <td class="formats">JPG, PNG, GIF</td>
-            <td><span class="device">Desktop/Mobil</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Inline Rectangle</td>
-            <td class="dimensions">300×250</td>
-            <td class="file-size">150 KB</td>
-            <td class="formats">JPG, PNG, GIF</td>
-            <td><span class="device">Desktop/Mobil</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Large Rectangle</td>
-            <td class="dimensions">336×280</td>
-            <td class="file-size">150 KB</td>
-            <td class="formats">JPG, PNG, GIF</td>
-            <td><span class="device">Desktop/Mobil</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Skyscraper</td>
-            <td class="dimensions">120×600</td>
-            <td class="file-size">150 KB</td>
-            <td class="formats">JPG, PNG, GIF</td>
-            <td><span class="device desktop">Desktop</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Wide Skyscraper</td>
-            <td class="dimensions">160×600</td>
-            <td class="file-size">150 KB</td>
-            <td class="formats">JPG, PNG, GIF</td>
-            <td><span class="device desktop">Desktop</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Half Page</td>
-            <td class="dimensions">300×600</td>
-            <td class="file-size">150 KB</td>
-            <td class="formats">JPG, PNG, GIF</td>
-            <td><span class="device desktop">Desktop</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Large Leaderboard</td>
-            <td class="dimensions">970×250</td>
-            <td class="file-size">150 KB</td>
-            <td class="formats">JPG, PNG, GIF</td>
-            <td><span class="device desktop">Desktop</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Mobile Banner</td>
-            <td class="dimensions">320×50</td>
-            <td class="file-size">150 KB</td>
-            <td class="formats">JPG, PNG, GIF</td>
-            <td><span class="device mobile">Mobil</span></td>
-          </tr>
-          <tr>
-            <td class="format-name">Mobile Leaderboard</td>
-            <td class="dimensions">320×100</td>
-            <td class="file-size">150 KB</td>
-            <td class="formats">JPG, PNG, GIF</td>
-            <td><span class="device mobile">Mobil</span></td>
-          </tr>
-        </tbody>
-      </table>
+    <div id="network-tables">
+      <!-- Dynamically generated from CREATIVE_SPECS -->
     </div>
 
     <footer>
-      <p>Seznam Creative Validator &bull; Verze 1.4.0 &bull; <a href="index.html" style="color: #3b82f6;">Zpět na validátor</a></p>
-      <p style="margin-top: 5px; font-size: 12px;">Pro aktuální technické specifikace navštivte <a href="https://seznam.prehledreklam.cz/" target="_blank" style="color: #3b82f6;">seznam.prehledreklam.cz</a></p>
+      <p>Seznam Creative Validator &bull; Verze <span id="app-version">-</span> &bull; <a href="index.html">Zpět na validátor</a></p>
+      <p style="margin-top: 5px; font-size: 12px;">Pro aktuální technické specifikace navštivte <a href="https://seznam.prehledreklam.cz/" target="_blank">seznam.prehledreklam.cz</a></p>
     </footer>
   </div>
+
+  <!-- Load specs from the main app -->
+  <script src="js/specs-rules.js"></script>
+  <script>
+    // Network display configuration
+    const NETWORK_CONFIG = {
+      SKLIK: {
+        title: 'Sklik',
+        order: 1
+      },
+      SOS: {
+        title: 'SOS (Seznam Oblíbené Služby)',
+        order: 2,
+        warning: {
+          title: '⚠️ Důležité: SOS podporuje POUZE rich media a in-article formáty',
+          text: 'Pro standardní bannery (300×250, 300×600, 480×300, atd.) použijte systémy ADFORM, ONEGAR nebo SKLIK.'
+        }
+      },
+      ADFORM: {
+        title: 'Adform (RTB)',
+        order: 3
+      },
+      ONEGAR: {
+        title: 'Onegar (RTB)',
+        order: 4
+      },
+      HP_EXCLUSIVE: {
+        title: 'HP Exclusive',
+        order: 5
+      },
+      GOOGLE_ADS: {
+        title: 'Google Ads (Validace)',
+        order: 6,
+        note: 'Systém pouze pro validaci rozměrů a velikostí. Nepodporuje export s UTM parametry.'
+      }
+    };
+
+    /**
+     * Format file size for display
+     */
+    function formatFileSize(sizeKB) {
+      if (sizeKB >= 1024) {
+        return `${(sizeKB / 1024).toFixed(0)} MB`;
+      }
+      return `${sizeKB} KB`;
+    }
+
+    /**
+     * Format file formats for display
+     */
+    function formatFileFormats(formats) {
+      return formats.map(f => f.toUpperCase()).join(', ');
+    }
+
+    /**
+     * Get device class for styling
+     */
+    function getDeviceClass(device) {
+      const deviceLower = device.toLowerCase();
+      if (deviceLower === 'mobil') return 'mobile';
+      if (deviceLower === 'desktop') return 'desktop';
+      if (deviceLower === 'aplikace') return 'app';
+      return '';
+    }
+
+    /**
+     * Format dimensions with proper separator
+     */
+    function formatDimensions(dimensions, spec) {
+      let formatted = dimensions.map(d => d.replace('x', '×')).join(', ');
+
+      // Add multi-file indicator
+      if (spec.multiFile && spec.fileCount) {
+        formatted += ` (${spec.fileCount} soubory)`;
+      }
+
+      return formatted;
+    }
+
+    /**
+     * Generate table row HTML
+     */
+    function generateTableRow(spec) {
+      const deviceClass = getDeviceClass(spec.device);
+
+      return `
+        <tr>
+          <td class="format-name">${spec.name}</td>
+          <td class="dimensions">${formatDimensions(spec.dimensions, spec)}</td>
+          <td class="file-size">${formatFileSize(spec.maxSize)}</td>
+          <td class="formats">${formatFileFormats(spec.formats)}</td>
+          <td><span class="device ${deviceClass}">${spec.device}</span></td>
+        </tr>
+      `;
+    }
+
+    /**
+     * Generate network section HTML
+     */
+    function generateNetworkSection(networkKey, specs) {
+      const config = NETWORK_CONFIG[networkKey];
+      if (!config) return '';
+
+      let html = `
+        <div class="network-section">
+          <h2 class="network-title">${config.title}</h2>
+      `;
+
+      // Add warning if exists (for SOS)
+      if (config.warning) {
+        html += `
+          <div class="sos-warning">
+            <p>${config.warning.title}</p>
+            <p>${config.warning.text}</p>
+          </div>
+        `;
+      }
+
+      // Add note if exists (for Google Ads)
+      if (config.note) {
+        html += `<p class="network-note">${config.note}</p>`;
+      }
+
+      html += `
+          <table>
+            <thead>
+              <tr>
+                <th>Formát</th>
+                <th>Rozměry</th>
+                <th>Max velikost</th>
+                <th>Formáty souborů</th>
+                <th>Zařízení</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+
+      // Generate rows for each spec
+      for (const [specKey, spec] of Object.entries(specs)) {
+        html += generateTableRow(spec);
+      }
+
+      html += `
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      return html;
+    }
+
+    /**
+     * Generate HTML5 formats list
+     */
+    function generateHTML5FormatsList() {
+      const html5ByNetwork = {};
+
+      // Collect HTML5 formats by network
+      for (const [networkKey, specs] of Object.entries(CREATIVE_SPECS)) {
+        const html5Formats = [];
+
+        for (const [specKey, spec] of Object.entries(specs)) {
+          if (spec.formats.includes('html5')) {
+            const dims = spec.dimensions.map(d => d.replace('x', '×')).join(', ');
+            html5Formats.push(`${spec.name} (${dims})`);
+          }
+        }
+
+        if (html5Formats.length > 0) {
+          const config = NETWORK_CONFIG[networkKey];
+          const title = config ? config.title.split(' ')[0] : networkKey;
+          html5ByNetwork[title] = html5Formats;
+        }
+      }
+
+      // Generate list HTML
+      let html = '';
+      for (const [network, formats] of Object.entries(html5ByNetwork)) {
+        html += `<li><strong>${network}:</strong> ${formats.join(', ')}</li>`;
+      }
+
+      return html;
+    }
+
+    /**
+     * Initialize the page
+     */
+    function init() {
+      // Generate network tables
+      const tablesContainer = document.getElementById('network-tables');
+
+      // Sort networks by order
+      const sortedNetworks = Object.entries(CREATIVE_SPECS)
+        .sort((a, b) => {
+          const orderA = NETWORK_CONFIG[a[0]]?.order || 99;
+          const orderB = NETWORK_CONFIG[b[0]]?.order || 99;
+          return orderA - orderB;
+        });
+
+      let tablesHtml = '';
+      for (const [networkKey, specs] of sortedNetworks) {
+        tablesHtml += generateNetworkSection(networkKey, specs);
+      }
+
+      tablesContainer.innerHTML = tablesHtml;
+
+      // Generate HTML5 formats list
+      const html5List = document.getElementById('html5-formats-list');
+      html5List.innerHTML = generateHTML5FormatsList();
+
+      // Set version from app.js (fetch it dynamically)
+      fetch('js/app.js')
+        .then(response => response.text())
+        .then(text => {
+          const match = text.match(/APP_VERSION\s*=\s*['"]([^'"]+)['"]/);
+          if (match) {
+            document.getElementById('app-version').textContent = match[1];
+          }
+        })
+        .catch(() => {
+          document.getElementById('app-version').textContent = '-';
+        });
+    }
+
+    // Run on page load
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
 </body>
 </html>

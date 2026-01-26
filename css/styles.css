@@ -391,6 +391,17 @@ textarea:focus {
   color: #92400e;
 }
 
+/* Assignment UI thumbnails */
+.assignment-thumbnail {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  border-radius: 4px;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
 /* Validation Results */
 .validation-card {
   border: 1px solid #ddd;

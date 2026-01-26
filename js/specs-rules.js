@@ -583,13 +583,13 @@ const FORMAT_SYSTEM_MAPPING = {
  * @returns {Array<string>} Array of allowed system names
  */
 function getAllowedSystemsForFormat(formatType) {
-  if (!formatType) return ['ADFORM', 'SOS', 'ONEGAR', 'SKLIK', 'HP_EXCLUSIVE']; // All systems if no format detected
+  if (!formatType) return ['ADFORM', 'SOS', 'ONEGAR', 'SKLIK', 'HP_EXCLUSIVE', 'GOOGLE_ADS']; // All systems if no format detected
 
   const allowed = FORMAT_SYSTEM_MAPPING[formatType];
   if (allowed) return allowed;
 
-  // Default: standard banner formats allowed on most systems
-  return ['ADFORM', 'SOS', 'ONEGAR', 'SKLIK'];
+  // Default: standard banner formats allowed on most systems (including Google Ads for validation)
+  return ['ADFORM', 'SOS', 'ONEGAR', 'SKLIK', 'GOOGLE_ADS'];
 }
 
 /**
@@ -780,13 +780,13 @@ function validateFileForFormat(fileData, formatSpec) {
       issues.push(`Rozměr ${fileData.dimensions} není podporován (očekáváno: ${formatSpec.dimensions.join(' nebo ')})`);
     }
 
-    // Check size limit (with 5% tolerance)
+    // Check size limit (with 5% tolerance) - SIZE IS A WARNING FOR HTML5, NOT BLOCKING
     const sizeLimit = formatSpec.maxSize;
     const fileSize = fileData.sizeKB;
     const toleranceMultiplier = 1.05; // 5% tolerance for file size
 
     if (fileSize > sizeLimit * toleranceMultiplier) {
-      issues.push(`Velikost souboru ${fileSize}KB překračuje limit ${sizeLimit}KB (${Math.round(sizeLimit * toleranceMultiplier)}KB s 5% tolerancí)`);
+      warnings.push(`Velikost souboru ${fileSize}KB překračuje limit ${sizeLimit}KB (${Math.round(sizeLimit * toleranceMultiplier)}KB s 5% tolerancí)`);
     }
 
     // Add HTML5 validation issues as WARNINGS (not blocking errors)
@@ -796,7 +796,7 @@ function validateFileForFormat(fileData, formatSpec) {
     }
 
     return {
-      valid: issues.length === 0, // Only critical issues (dimensions, size) block validation
+      valid: issues.length === 0, // Only dimension mismatch blocks validation for HTML5
       issues: issues,
       warnings: warnings
     };
@@ -836,6 +836,25 @@ function validateFileForFormat(fileData, formatSpec) {
 }
 
 /**
+ * Group files by folder path for multi-file format detection
+ * @param {Array} files - Array of file objects
+ * @param {Function} filterFn - Optional filter function to apply to each file
+ * @returns {Object} Object keyed by folder path with arrays of files
+ */
+function groupByFolderPath(files, filterFn = null) {
+  const grouped = {};
+  for (const file of files) {
+    if (filterFn && !filterFn(file)) continue;
+    const key = file.folderPath || 'root';
+    if (!grouped[key]) {
+      grouped[key] = [];
+    }
+    grouped[key].push(file);
+  }
+  return grouped;
+}
+
+/**
  * Detect multi-file format groups
  * @param {Array} allFiles - Array of analyzed files
  * @returns {Array} Array of multi-file format groups
@@ -854,15 +873,8 @@ function detectMultiFileFormats(allFiles) {
     return fileName.includes('uncover') || folderPath.includes('uncover');
   });
 
-  // Group by folder FIRST to prevent mixing files from different folders
-  const uncoverByFolder = {};
-  for (const file of uncoverFiles) {
-    const key = file.folderPath || 'root';
-    if (!uncoverByFolder[key]) {
-      uncoverByFolder[key] = [];
-    }
-    uncoverByFolder[key].push(file);
-  }
+  // Group by folder to prevent mixing files from different folders
+  const uncoverByFolder = groupByFolderPath(uncoverFiles);
 
   // Then create pairs within each folder
   for (const folderKey in uncoverByFolder) {
@@ -896,33 +908,15 @@ function detectMultiFileFormats(allFiles) {
   // Check for Spincube (4x 480x480)
   // First, identify Spincube files by name/folder, then by dimension
   const spincubeFiles = allFiles.filter(f => f.dimensions === '480x480');
-  const groupedSpincube = [];
-  const ungroupedSpincube = [];
 
-  // Group by folder path or filename containing "spincube"
-  const spincubeByFolder = {};
-  for (const file of spincubeFiles) {
+  // Group by folder path - only files with "spincube" in name/folder
+  const spincubeByFolder = groupByFolderPath(spincubeFiles, file => {
     // Skip HTML5 files - spincube only supports static images
-    if (file.isHTML5 || file.fileType === 'html5') {
-      ungroupedSpincube.push(file);
-      continue;
-    }
-
+    if (file.isHTML5 || file.fileType === 'html5') return false;
     const fileName = (file.name || '').toLowerCase();
     const folderPath = (file.folderPath || '').toLowerCase();
-
-    // Check if filename or folder contains "spincube"
-    if (fileName.includes('spincube') || folderPath.includes('spincube')) {
-      // Group by folder path
-      const key = file.folderPath || 'root';
-      if (!spincubeByFolder[key]) {
-        spincubeByFolder[key] = [];
-      }
-      spincubeByFolder[key].push(file);
-    } else {
-      ungroupedSpincube.push(file);
-    }
-  }
+    return fileName.includes('spincube') || folderPath.includes('spincube');
+  });
 
   // Process named/folder-grouped Spincube sets
   for (const folderKey in spincubeByFolder) {
@@ -958,31 +952,15 @@ function detectMultiFileFormats(allFiles) {
   // Check for Spinner (4x 300x600)
   // First, identify Spinner files by name/folder containing "spinner"
   const skyscraperFiles = allFiles.filter(f => f.dimensions === '300x600');
-  const spinnerByFolder = {};
-  const nonSpinnerSkyscrapers = [];
 
-  for (const file of skyscraperFiles) {
+  // Group by folder path - only files with "spinner" in name/folder
+  const spinnerByFolder = groupByFolderPath(skyscraperFiles, file => {
     // Skip HTML5 files - spinner only supports static images
-    if (file.isHTML5 || file.fileType === 'html5') {
-      nonSpinnerSkyscrapers.push(file);
-      continue;
-    }
-
+    if (file.isHTML5 || file.fileType === 'html5') return false;
     const fileName = (file.name || '').toLowerCase();
     const folderPath = (file.folderPath || '').toLowerCase();
-
-    // Check if filename or folder contains "spinner"
-    if (fileName.includes('spinner') || folderPath.includes('spinner')) {
-      // Group by folder path
-      const key = file.folderPath || 'root';
-      if (!spinnerByFolder[key]) {
-        spinnerByFolder[key] = [];
-      }
-      spinnerByFolder[key].push(file);
-    } else {
-      nonSpinnerSkyscrapers.push(file);
-    }
-  }
+    return fileName.includes('spinner') || folderPath.includes('spinner');
+  });
 
   // Process named/folder-grouped Spinner sets
   for (const folderKey in spinnerByFolder) {
@@ -1027,25 +1005,9 @@ function detectMultiFileFormats(allFiles) {
   const triggers = allFiles.filter(f => f.dimensions === '461x100');
   const banners = allFiles.filter(f => f.dimensions === '1100x500');
 
-  // Group by folder FIRST to prevent mixing files from different folders
-  const triggersByFolder = {};
-  const bannersByFolder = {};
-
-  for (const trigger of triggers) {
-    const key = trigger.folderPath || 'root';
-    if (!triggersByFolder[key]) {
-      triggersByFolder[key] = [];
-    }
-    triggersByFolder[key].push(trigger);
-  }
-
-  for (const banner of banners) {
-    const key = banner.folderPath || 'root';
-    if (!bannersByFolder[key]) {
-      bannersByFolder[key] = [];
-    }
-    bannersByFolder[key].push(banner);
-  }
+  // Group by folder to prevent mixing files from different folders
+  const triggersByFolder = groupByFolderPath(triggers);
+  const bannersByFolder = groupByFolderPath(banners);
 
   // Get all unique folder keys
   const allFolderKeys = new Set([...Object.keys(triggersByFolder), ...Object.keys(bannersByFolder)]);
@@ -1115,6 +1077,7 @@ if (typeof module !== 'undefined' && module.exports) {
     parseDimension,
     findMatchingFormats,
     validateFileForFormat,
-    detectMultiFileFormats
+    detectMultiFileFormats,
+    groupByFolderPath
   };
 }

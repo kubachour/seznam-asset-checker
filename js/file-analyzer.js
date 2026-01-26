@@ -1,6 +1,13 @@
 // File Analysis Module for Creative Validator
 // Handles dimension detection, color space validation, and file analysis
 
+// =============================================================================
+// MODULE DEPENDENCY CHECK
+// =============================================================================
+if (typeof FILE_TYPES === 'undefined' || typeof FileTypeHelpers === 'undefined') {
+  console.error('file-analyzer.js: FILE_TYPES or FileTypeHelpers not found. Ensure file-types.js is loaded before this module.');
+}
+
 /**
  * Read image dimensions using Image API
  * @param {File} file - Image file
@@ -10,8 +17,16 @@ async function readImageDimensions(file) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
+    const IMAGE_LOAD_TIMEOUT = 10000; // 10 seconds timeout for corrupted/slow images
+
+    // Set up timeout to prevent indefinite hanging on corrupted images
+    const timeoutId = setTimeout(() => {
+      URL.revokeObjectURL(url);
+      reject(new Error(`Image load timeout after ${IMAGE_LOAD_TIMEOUT / 1000}s`));
+    }, IMAGE_LOAD_TIMEOUT);
 
     img.onload = () => {
+      clearTimeout(timeoutId);
       const dimensions = {
         width: img.naturalWidth,
         height: img.naturalHeight
@@ -21,6 +36,7 @@ async function readImageDimensions(file) {
     };
 
     img.onerror = () => {
+      clearTimeout(timeoutId);
       URL.revokeObjectURL(url);
       reject(new Error('Failed to load image'));
     };
@@ -193,6 +209,48 @@ function getFileFormat(file) {
   return FILE_TYPES.TYPES.UNKNOWN;
 }
 
+// =============================================================================
+// FORMAT DETECTION PATTERNS (Data-driven approach for DRY code)
+// =============================================================================
+
+/**
+ * Format detection patterns - defines keywords and their mappings
+ * Each pattern has: keywords (array), format, system, confidence
+ */
+const FORMAT_PATTERNS = [
+  // Social media (exclude from all ad systems)
+  { keywords: ['social-media', 'facebook', 'linkedin', 'twitter', 'instagram', 'tiktok'], format: 'social-media', system: null, confidence: 'high', isSocialMedia: true },
+
+  // SOS-exclusive formats (high confidence)
+  { keywords: ['spincube', 'spin-cube'], format: 'spincube', system: 'SOS', confidence: 'high' },
+  { keywords: ['inarticle', 'in-article', 'in-articl'], format: 'inarticle', system: 'SOS', confidence: 'high' },
+  { keywords: ['exclusive'], format: 'exclusive', system: 'SOS', confidence: 'high' },
+  { keywords: ['spinner'], format: 'spinner', system: 'SOS', confidence: 'high' },
+
+  // Branding variants (standalone keywords for backward compatibility)
+  { keywords: ['scratcher', 'scratch'], format: 'branding-scratcher', system: 'SOS', confidence: 'high' },
+  { keywords: ['uncover'], format: 'branding-uncover', system: 'SOS', confidence: 'high' },
+  { keywords: ['videopanel'], format: 'branding-videopanel', system: 'SOS', confidence: 'high' },
+
+  // Multi-system formats
+  { keywords: ['interscroller', 'inter-scroller'], format: 'interscroller', system: null, confidence: 'high' },
+  { keywords: ['kombi'], format: 'kombi', system: null, confidence: 'medium' },
+  { keywords: ['html5', 'html-5'], format: 'html5-banner', system: null, confidence: 'medium' },
+
+  // Google Ads / UAC
+  { keywords: ['uac', 'google-ads', 'googleads'], format: 'uac', system: 'GOOGLE_ADS', confidence: 'high' }
+];
+
+/**
+ * Branding sub-type mappings for special handling
+ */
+const BRANDING_SUBTYPES = {
+  'scratcher': 'branding-scratcher',
+  'scratch': 'branding-scratcher',
+  'uncover': 'branding-uncover',
+  'videopanel': 'branding-videopanel'
+};
+
 /**
  * Detect format type from filename and folder path
  * Priority: Name-based detection over dimension-based detection
@@ -203,81 +261,16 @@ function getFileFormat(file) {
 function detectFormatFromName(filename, folderPath = '') {
   const searchText = (filename + ' ' + folderPath).toLowerCase();
 
-  // Social media detection (exclude from all ad systems)
-  // Note: Use specific platform names only - avoid broad keywords like 'some' which cause false positives
-  const socialKeywords = ['social-media', 'facebook', 'linkedin', 'twitter', 'instagram', 'tiktok'];
-  for (const keyword of socialKeywords) {
-    if (searchText.includes(keyword)) {
-      return {
-        detectedFormat: 'social-media',
-        detectedSystem: null,
-        confidence: 'high',
-        isSocialMedia: true
-      };
-    }
-  }
-
-  // SOS-exclusive formats
-  if (searchText.includes('spincube') || searchText.includes('spin-cube')) {
-    return {
-      detectedFormat: 'spincube',
-      detectedSystem: 'SOS',
-      confidence: 'high',
-      isSocialMedia: false
-    };
-  }
-
-  if (searchText.includes('inarticle') || searchText.includes('in-article') || searchText.includes('in-articl')) {
-    return {
-      detectedFormat: 'inarticle',
-      detectedSystem: 'SOS',
-      confidence: 'high',
-      isSocialMedia: false
-    };
-  }
-
-  if (searchText.includes('exclusive')) {
-    return {
-      detectedFormat: 'exclusive',
-      detectedSystem: 'SOS',
-      confidence: 'high',
-      isSocialMedia: false
-    };
-  }
-
-  if (searchText.includes('spinner')) {
-    return {
-      detectedFormat: 'spinner',
-      detectedSystem: 'SOS',
-      confidence: 'high',
-      isSocialMedia: false
-    };
-  }
-
-  // Check for branding formats with systematic second-word parsing
+  // Check for branding formats with systematic second-word parsing (special handling)
   if (searchText.includes('branding')) {
-    // Parse second word after "branding" to determine sub-type
     const brandingMatch = searchText.match(/branding[\s-]+(scratcher|scratch|uncover|videopanel)/i);
 
-    if (brandingMatch) {
+    if (brandingMatch?.[1]) {
       const subType = brandingMatch[1].toLowerCase();
-      if (subType === 'scratcher' || subType === 'scratch') {
+      const mappedFormat = BRANDING_SUBTYPES[subType];
+      if (mappedFormat) {
         return {
-          detectedFormat: 'branding-scratcher',
-          detectedSystem: 'SOS',
-          confidence: 'high',
-          isSocialMedia: false
-        };
-      } else if (subType === 'uncover') {
-        return {
-          detectedFormat: 'branding-uncover',
-          detectedSystem: 'SOS',
-          confidence: 'high',
-          isSocialMedia: false
-        };
-      } else if (subType === 'videopanel') {
-        return {
-          detectedFormat: 'branding-videopanel',
+          detectedFormat: mappedFormat,
           detectedSystem: 'SOS',
           confidence: 'high',
           isSocialMedia: false
@@ -294,69 +287,16 @@ function detectFormatFromName(filename, folderPath = '') {
     };
   }
 
-  // Standalone keywords for backward compatibility
-  if (searchText.includes('scratcher') || searchText.includes('scratch')) {
-    return {
-      detectedFormat: 'branding-scratcher',
-      detectedSystem: 'SOS',
-      confidence: 'high',
-      isSocialMedia: false
-    };
-  }
-
-  if (searchText.includes('uncover')) {
-    return {
-      detectedFormat: 'branding-uncover',
-      detectedSystem: 'SOS',
-      confidence: 'high',
-      isSocialMedia: false
-    };
-  }
-
-  if (searchText.includes('videopanel')) {
-    return {
-      detectedFormat: 'branding-videopanel',
-      detectedSystem: 'SOS',
-      confidence: 'high',
-      isSocialMedia: false
-    };
-  }
-
-  if (searchText.includes('interscroller') || searchText.includes('inter-scroller')) {
-    return {
-      detectedFormat: 'interscroller',
-      detectedSystem: null, // Can be SOS or SKLIK
-      confidence: 'high',
-      isSocialMedia: false
-    };
-  }
-
-  if (searchText.includes('kombi')) {
-    return {
-      detectedFormat: 'kombi',
-      detectedSystem: null, // Can be ONEGAR or SKLIK
-      confidence: 'medium',
-      isSocialMedia: false
-    };
-  }
-
-  if (searchText.includes('html5') || searchText.includes('html-5')) {
-    return {
-      detectedFormat: 'html5-banner',
-      detectedSystem: null, // Can be multiple systems
-      confidence: 'medium',
-      isSocialMedia: false
-    };
-  }
-
-  // UAC (Universal App Campaigns) detection
-  if (searchText.includes('uac') || searchText.includes('google-ads') || searchText.includes('googleads')) {
-    return {
-      detectedFormat: 'uac',
-      detectedSystem: 'GOOGLE_ADS',
-      confidence: 'high',
-      isSocialMedia: false
-    };
+  // Check all format patterns
+  for (const pattern of FORMAT_PATTERNS) {
+    if (pattern.keywords.some(keyword => searchText.includes(keyword))) {
+      return {
+        detectedFormat: pattern.format,
+        detectedSystem: pattern.system,
+        confidence: pattern.confidence,
+        isSocialMedia: pattern.isSocialMedia || false
+      };
+    }
   }
 
   // No specific format detected from name
@@ -447,8 +387,10 @@ async function analyzeFile(file, folderPath = '') {
         if (validation.dimensions) {
           analysis.dimensions = validation.dimensions;
           const parts = validation.dimensions.split('x');
-          analysis.width = parseInt(parts[0]);
-          analysis.height = parseInt(parts[1]);
+          if (parts.length >= 2) {
+            analysis.width = parseInt(parts[0], 10) || null;
+            analysis.height = parseInt(parts[1], 10) || null;
+          }
         }
 
         // Mark as invalid if validation failed
@@ -485,7 +427,7 @@ async function analyzeFile(file, folderPath = '') {
       analysis.preview = await generatePreview(file, fileType);
     }
   } catch (error) {
-    console.error(`Error analyzing file ${file.name}:`, error);
+    console.warn(`Could not analyze file ${file.name}:`, error.message);
     analysis.error = error.message;
   }
 
