@@ -5,7 +5,7 @@
 // GLOBAL STATE
 // =============================================================================
 
-const APP_VERSION = 'v1.5.19'; // Stats count now matches actual exportable files (HTML5/static, network filters)
+const APP_VERSION = 'v1.5.20'; // Step 5: Removed asset count, added thumbnails to export table
 
 // =============================================================================
 // SECURITY HELPERS
@@ -4268,18 +4268,14 @@ function buildNetworkTierSection(network, tier, selection, campaignName, content
         </div>
       </div>
 
-      <div style="padding: 12px; background: white; border-radius: 8px; margin-bottom: 15px;">
-        <div style="font-size: 12px; color: #6b7280;">Počet kampaňových assetů</div>
-        <div style="font-size: 20px; font-weight: 700; color: #3b82f6;">${stats.eligiblePlacements}</div>
-      </div>
-
       ${eligibleFiles.length > 0 ? `
         <div style="margin-bottom: 15px;">
           <strong style="display: block; margin-bottom: 8px; color: #1f2937;">Bannery k exportu:</strong>
           <div style="overflow-x: auto; background: white; border-radius: 6px;">
-            <table class="results-table" style="width: 100%; min-width: 1000px;">
+            <table class="results-table" style="width: 100%; min-width: 1050px;">
               <thead>
                 <tr>
+                  <th style="width: 50px;">Náhled</th>
                   <th style="width: 180px;">Název banneru</th>
                   <th style="width: 100px;">Rozměr</th>
                   <th style="width: 120px;">Formát</th>
@@ -4354,6 +4350,7 @@ function buildNetworkTierSection(network, tier, selection, campaignName, content
 
                   return `
                     <tr>
+                      <td style="text-align: center;">${generateThumbnailHTML(f.file, 40)}</td>
                       <td>
                         <div style="font-weight: 600;">${f.fileName}</div>
                         <div style="font-size: 11px; color: #10b981; margin-top: 2px;">→ ${finalName}</div>
