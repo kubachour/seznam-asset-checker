@@ -643,6 +643,146 @@ const FORMAT_NAME_MAP = {
   '1100x500': 'exclusive-banner'
 };
 
+/**
+ * Dimension to position name mapping for UTM URL generation
+ * Maps banner dimensions to their spec-based position names
+ */
+const DIMENSION_TO_POSITION_MAP = {
+  '480x300': 'wallpaper',
+  '970x210': 'leaderboard',
+  '300x250': 'sponzor-sluzby',
+  '970x310': 'rectangle',
+  '300x600': 'skyscraper',
+  '300x300': 'mobilni-square',
+  '480x480': 'mobilni-square-premium',
+  '1200x628': 'kombi',
+  '1200x1200': 'kombi',
+  '728x90': 'leaderboard-middle',
+  '320x100': 'mobilni-leaderboard',
+  '160x600': 'skyscraper-sticky'
+};
+
+// =============================================================================
+// FORMAT DETECTION PATTERNS (Centralized from file-analyzer.js)
+// =============================================================================
+
+/**
+ * Format detection patterns - defines keywords and their mappings
+ * Each pattern has: keywords (array), format, system, confidence
+ * Used by detectFormatFromName() and detectFormatFromPath()
+ */
+const FORMAT_PATTERNS = [
+  // Social media (exclude from all ad systems)
+  { keywords: ['social-media', 'facebook', 'linkedin', 'twitter', 'instagram', 'tiktok'], format: 'social-media', system: null, confidence: 'high', isSocialMedia: true },
+
+  // SOS-exclusive formats (high confidence)
+  { keywords: ['spincube', 'spin-cube'], format: 'spincube', system: 'SOS', confidence: 'high' },
+  { keywords: ['inarticle', 'in-article', 'in-articl'], format: 'inarticle', system: 'SOS', confidence: 'high' },
+  { keywords: ['exclusive'], format: 'exclusive', system: 'SOS', confidence: 'high' },
+  { keywords: ['spinner'], format: 'spinner', system: 'SOS', confidence: 'high' },
+
+  // Branding variants (standalone keywords for backward compatibility)
+  { keywords: ['scratcher', 'scratch'], format: 'branding-scratcher', system: 'SOS', confidence: 'high' },
+  { keywords: ['uncover'], format: 'branding-uncover', system: 'SOS', confidence: 'high' },
+  { keywords: ['videopanel'], format: 'branding-videopanel', system: 'SOS', confidence: 'high' },
+
+  // Multi-system formats
+  { keywords: ['interscroller', 'inter-scroller'], format: 'interscroller', system: null, confidence: 'high' },
+  { keywords: ['kombi'], format: 'kombi', system: null, confidence: 'medium' },
+  { keywords: ['html5', 'html-5'], format: 'html5-banner', system: null, confidence: 'medium' },
+
+  // Google Ads / UAC
+  { keywords: ['uac', 'google-ads', 'googleads'], format: 'uac', system: 'GOOGLE_ADS', confidence: 'high' }
+];
+
+/**
+ * Branding sub-type mappings for special handling
+ */
+const BRANDING_SUBTYPES = {
+  'scratcher': 'branding-scratcher',
+  'scratch': 'branding-scratcher',
+  'uncover': 'branding-uncover',
+  'videopanel': 'branding-videopanel'
+};
+
+/**
+ * Extended path-based format patterns for detectFormatFromPath()
+ * More specific patterns checked before generic ones
+ */
+const PATH_FORMAT_PATTERNS = [
+  // HTML5 specific patterns (check before generic 'html5')
+  { pattern: 'html5-adform', format: 'html5-adform' },
+  { pattern: 'html5_adform', format: 'html5-adform' },
+  { pattern: 'html5 adform', format: 'html5-adform' },
+  { pattern: 'html5-sklik', format: 'html5-sklik' },
+  { pattern: 'html5_sklik', format: 'html5-sklik' },
+  { pattern: 'html5 sklik', format: 'html5-sklik' },
+  { pattern: 'html5-self', format: 'html5-adform' },
+  { pattern: 'html5_self', format: 'html5-adform' },
+  { pattern: 'html5 self', format: 'html5-adform' },
+  { pattern: 'html5-onegar', format: 'html5-onegar' },
+  { pattern: 'html5_onegar', format: 'html5-onegar' },
+  { pattern: 'html5 onegar', format: 'html5-onegar' },
+  { pattern: 'html5', format: 'html5' },
+
+  // UAC patterns
+  { pattern: 'uac', format: 'uac' },
+
+  // In-article patterns
+  { pattern: 'in-article', format: 'in-article' },
+  { pattern: 'in_article', format: 'in-article' },
+  { pattern: 'inarticle', format: 'in-article' },
+  { pattern: 'in article', format: 'in-article' },
+
+  // Kombi patterns
+  { pattern: 'kombi', format: 'kombi' },
+
+  // Branding patterns
+  { pattern: 'branding scratcher', format: 'branding-scratcher' },
+  { pattern: 'branding-scratcher', format: 'branding-scratcher' },
+  { pattern: 'branding_scratcher', format: 'branding-scratcher' },
+  { pattern: 'brandingscratcher', format: 'branding-scratcher' },
+  { pattern: 'scratcher', format: 'branding-scratcher' },
+
+  { pattern: 'branding uncover', format: 'branding-uncover' },
+  { pattern: 'branding-uncover', format: 'branding-uncover' },
+  { pattern: 'branding_uncover', format: 'branding-uncover' },
+  { pattern: 'brandinguncover', format: 'branding-uncover' },
+  { pattern: 'uncover', format: 'branding-uncover' },
+
+  { pattern: 'branding sklik', format: 'branding-sklik' },
+  { pattern: 'branding-sklik', format: 'branding-sklik' },
+  { pattern: 'branding_sklik', format: 'branding-sklik' },
+
+  { pattern: 'spincube', format: 'spincube' },
+  { pattern: 'spin cube', format: 'spincube' },
+  { pattern: 'spin-cube', format: 'spincube' },
+  { pattern: 'spin_cube', format: 'spincube' },
+
+  { pattern: 'spinner', format: 'spinner' },
+
+  // Interscroller patterns
+  { pattern: 'mobilni-interscroller', format: 'mobilni-interscroller' },
+  { pattern: 'mobilni_interscroller', format: 'mobilni-interscroller' },
+  { pattern: 'mobilni interscroller', format: 'mobilni-interscroller' },
+  { pattern: 'interscroller', format: 'interscroller' },
+  { pattern: 'inter-scroller', format: 'interscroller' },
+  { pattern: 'inter_scroller', format: 'interscroller' },
+
+  { pattern: 'exclusive desktop', format: 'exclusive-desktop' },
+  { pattern: 'exclusive-desktop', format: 'exclusive-desktop' },
+  { pattern: 'exclusive_desktop', format: 'exclusive-desktop' },
+  { pattern: 'exclusivedesktop', format: 'exclusive-desktop' },
+
+  { pattern: 'vanocni', format: 'vanocni' },
+  { pattern: 'vanoce', format: 'vanocni' },
+  { pattern: 'vánoční', format: 'vanocni' },
+  { pattern: 'vánoce', format: 'vanocni' },
+
+  { pattern: 'obecna', format: 'obecna' },
+  { pattern: 'obecná', format: 'obecna' }
+];
+
 // =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
@@ -1065,12 +1205,149 @@ function detectMultiFileFormats(allFiles) {
   return multiFileGroups;
 }
 
+// =============================================================================
+// CENTRALIZED HELPER FUNCTIONS
+// =============================================================================
+
+/**
+ * Get all network names from CREATIVE_SPECS
+ * @returns {Array<string>} Array of network names
+ */
+function getAllNetworks() {
+  return Object.keys(CREATIVE_SPECS);
+}
+
+/**
+ * Get network name variants for path detection
+ * Maps canonical network names to all valid path variants
+ * @returns {Object} Object mapping canonical names to variant arrays
+ */
+function getNetworkVariants() {
+  return {
+    HP_EXCLUSIVE: ['HP_EXCLUSIVE', 'HPEXCLUSIVE', 'HP EXCLUSIVE'],
+    GOOGLE_ADS: ['GOOGLE_ADS', 'GOOGLE ADS', 'GADS', 'GOOGLEADS']
+  };
+}
+
+/**
+ * Check if a network has tier support (HIGH/LOW)
+ * @param {string} network - Network name
+ * @returns {boolean} True if network has tiers
+ */
+function networkHasTiers(network) {
+  const networkSpecs = CREATIVE_SPECS[network];
+  if (!networkSpecs) return false;
+
+  // Check if any spec in this network has non-empty tier array
+  for (const spec of Object.values(networkSpecs)) {
+    if (spec.tier && spec.tier.length > 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Get formats that are exclusive to SOS (only deployed to SOS)
+ * Derives from FORMAT_SYSTEM_MAPPING
+ * @returns {Array<string>} Array of SOS-exclusive format names
+ */
+function getSOSExclusiveFormats() {
+  const sosExclusive = [];
+  for (const [format, systems] of Object.entries(FORMAT_SYSTEM_MAPPING)) {
+    if (systems.length === 1 && systems[0] === 'SOS') {
+      sosExclusive.push(format);
+    }
+  }
+  return sosExclusive;
+}
+
+/**
+ * Detect specific format from folder path (e.g., branding-scratcher, spincube, etc.)
+ * This prevents files from different formats but same dimensions from being mixed
+ * @param {string} folderPath - Full folder path
+ * @returns {string|null} Detected format name or null
+ */
+function detectFormatFromPath(folderPath) {
+  if (!folderPath) return null;
+
+  const pathLower = folderPath.toLowerCase();
+
+  // Check each pattern from PATH_FORMAT_PATTERNS
+  for (const { pattern, format } of PATH_FORMAT_PATTERNS) {
+    if (pathLower.includes(pattern)) {
+      return format;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Map banner dimensions to position name for UTM URL generation
+ * @param {string} dimensions - Banner dimensions (e.g., "300x250")
+ * @returns {string} Position name (e.g., "sponzor-sluzby")
+ */
+function getDimensionPosition(dimensions) {
+  return DIMENSION_TO_POSITION_MAP[dimensions] || 'banner';
+}
+
+/**
+ * Detect system name from folder path
+ * @param {string} folderPath - Folder path
+ * @returns {string|null} Detected system name or null
+ */
+function detectSystemFromPath(folderPath) {
+  if (!folderPath) return null;
+
+  const pathUpper = folderPath.toUpperCase();
+  const networks = getAllNetworks();
+  const variants = getNetworkVariants();
+
+  // Build list of all systems including variants
+  const systemsToCheck = [...networks];
+  for (const [canonical, variantList] of Object.entries(variants)) {
+    for (const variant of variantList) {
+      if (!systemsToCheck.includes(variant)) {
+        systemsToCheck.push(variant);
+      }
+    }
+  }
+
+  for (const system of systemsToCheck) {
+    if (pathUpper.includes(system)) {
+      // Normalize HP variants to HP_EXCLUSIVE
+      if (system.startsWith('HP') || variants.HP_EXCLUSIVE?.includes(system)) {
+        return 'HP_EXCLUSIVE';
+      }
+      // Normalize Google Ads variants to GOOGLE_ADS
+      if (system.includes('GOOGLE') || system === 'GADS' || variants.GOOGLE_ADS?.includes(system)) {
+        return 'GOOGLE_ADS';
+      }
+      return system;
+    }
+  }
+
+  return null;
+}
+
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     CREATIVE_SPECS,
     FORMAT_SYSTEM_MAPPING,
     FORMAT_NAME_MAP,
+    DIMENSION_TO_POSITION_MAP,
+    FORMAT_PATTERNS,
+    BRANDING_SUBTYPES,
+    PATH_FORMAT_PATTERNS,
+    getAllNetworks,
+    getNetworkVariants,
+    networkHasTiers,
+    getSOSExclusiveFormats,
+    getDimensionPosition,
+    detectFormatFromPath,
+    detectSystemFromPath,
     getAllowedSystemsForFormat,
     isFormatAllowedForSystem,
     getFormatDisplayName,

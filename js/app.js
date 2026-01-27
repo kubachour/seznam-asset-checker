@@ -5,7 +5,7 @@
 // GLOBAL STATE
 // =============================================================================
 
-const APP_VERSION = 'v1.5.20'; // Step 5: Removed asset count, added thumbnails to export table
+const APP_VERSION = 'v1.5.21'; // Centralized asset definitions in specs-rules.js
 
 // =============================================================================
 // SECURITY HELPERS
@@ -884,29 +884,7 @@ function buildUTMCampaign(service, campaignName) {
   return normalizedCampaign;
 }
 
-/**
- * Map banner dimensions to position name for zbozi campaigns
- * @param {string} dimensions - Banner dimensions (e.g., "300x250")
- * @returns {string} Position name (e.g., "sponzor-sluzby")
- */
-function dimensionToPosition(dimensions) {
-  const dimensionMap = {
-    '480x300': 'wallpaper',
-    '970x210': 'leaderboard',
-    '300x250': 'sponzor-sluzby',
-    '970x310': 'rectangle',
-    '300x600': 'skyscraper',
-    '300x300': 'mobilni-square',
-    '480x480': 'mobilni-square-premium',
-    '1200x628': 'kombi',
-    '1200x1200': 'kombi',
-    '728x90': 'leaderboard-middle',
-    '320x100': 'mobilni-leaderboard',
-    '160x600': 'skyscraper-sticky'
-  };
-
-  return dimensionMap[dimensions] || 'banner';
-}
+// dimensionToPosition() moved to specs-rules.js as getDimensionPosition()
 
 /**
  * Format date range for zbozi HIGH tier campaigns
@@ -1070,7 +1048,7 @@ function generateBannerURL(params) {
 
     // ========== ZBOZI CAMPAIGN LOGIC ==========
     if (isZbozi) {
-      const position = dimensionToPosition(dimensions);
+      const position = getDimensionPosition(dimensions);
 
       // utm_campaign: Different for LOW vs HIGH
       if (tier === 'HIGH') {
@@ -1150,7 +1128,7 @@ function generateBannerURL(params) {
 
     // ========== ZBOZI CAMPAIGN LOGIC ==========
     if (isZbozi) {
-      const position = dimensionToPosition(dimensions);
+      const position = getDimensionPosition(dimensions);
 
       // utm_campaign: Different for LOW vs HIGH
       if (tier === 'HIGH') {
@@ -1216,7 +1194,7 @@ function generateBannerURL(params) {
 
     // ========== ZBOZI CAMPAIGN LOGIC ==========
     if (isZbozi) {
-      const position = dimensionToPosition(dimensions);
+      const position = getDimensionPosition(dimensions);
 
       // utm_campaign: Different for LOW vs HIGH
       if (tier === 'HIGH') {
@@ -1266,7 +1244,7 @@ function generateBannerURL(params) {
 
     // ========== ZBOZI CAMPAIGN LOGIC ==========
     if (isZbozi) {
-      const position = dimensionToPosition(dimensions);
+      const position = getDimensionPosition(dimensions);
 
       // utm_campaign: Different for LOW vs HIGH
       if (tier === 'HIGH') {
@@ -1332,133 +1310,7 @@ function generateBannerURL(params) {
   return url;
 }
 
-// =============================================================================
-// SYSTEM NAME DETECTION
-// =============================================================================
-
-/**
- * Detect system name from folder path
- * @param {string} folderPath - Folder path
- * @returns {string|null} Detected system name or null
- */
-function detectSystemFromPath(folderPath) {
-  if (!folderPath) return null;
-
-  const pathUpper = folderPath.toUpperCase();
-  const systems = ['ADFORM', 'SOS', 'ONEGAR', 'SKLIK', 'HP_EXCLUSIVE', 'HPEXCLUSIVE', 'HP EXCLUSIVE', 'GOOGLE_ADS', 'GOOGLE ADS', 'GADS'];
-
-  for (const system of systems) {
-    if (pathUpper.includes(system)) {
-      // Normalize HP variants to HP_EXCLUSIVE
-      if (system.startsWith('HP')) {
-        return 'HP_EXCLUSIVE';
-      }
-      // Normalize Google Ads variants to GOOGLE_ADS
-      if (system.includes('GOOGLE') || system === 'GADS') {
-        return 'GOOGLE_ADS';
-      }
-      return system;
-    }
-  }
-
-  return null;
-}
-
-/**
- * Detect specific format from folder path (e.g., branding-scratcher, spincube, etc.)
- * This prevents files from different formats but same dimensions from being mixed
- * @param {string} folderPath - Full folder path
- * @returns {string|null} Detected format name or null
- */
-function detectFormatFromPath(folderPath) {
-  if (!folderPath) return null;
-
-  const pathLower = folderPath.toLowerCase();
-
-  // Define format patterns to detect (order matters - check more specific patterns first)
-  const formatPatterns = [
-    // HTML5 specific patterns (check before generic 'html5')
-    { pattern: 'html5-adform', format: 'html5-adform' },
-    { pattern: 'html5_adform', format: 'html5-adform' },
-    { pattern: 'html5 adform', format: 'html5-adform' },
-    { pattern: 'html5-sklik', format: 'html5-sklik' },
-    { pattern: 'html5_sklik', format: 'html5-sklik' },
-    { pattern: 'html5 sklik', format: 'html5-sklik' },
-    { pattern: 'html5-self', format: 'html5-adform' },  // Self = Adform for HTML5 banners
-    { pattern: 'html5_self', format: 'html5-adform' },  // Self = Adform for HTML5 banners
-    { pattern: 'html5 self', format: 'html5-adform' },  // Self = Adform for HTML5 banners
-    { pattern: 'html5-onegar', format: 'html5-onegar' },
-    { pattern: 'html5_onegar', format: 'html5-onegar' },
-    { pattern: 'html5 onegar', format: 'html5-onegar' },
-    { pattern: 'html5', format: 'html5' },
-
-    // UAC patterns
-    { pattern: 'uac', format: 'uac' },
-
-    // In-article patterns
-    { pattern: 'in-article', format: 'in-article' },
-    { pattern: 'in_article', format: 'in-article' },
-    { pattern: 'inarticle', format: 'in-article' },
-    { pattern: 'in article', format: 'in-article' },
-
-    // Kombi patterns
-    { pattern: 'kombi', format: 'kombi' },
-
-    // Branding patterns
-    { pattern: 'branding scratcher', format: 'branding-scratcher' },
-    { pattern: 'branding-scratcher', format: 'branding-scratcher' },
-    { pattern: 'branding_scratcher', format: 'branding-scratcher' },
-    { pattern: 'brandingscratcher', format: 'branding-scratcher' },
-    { pattern: 'scratcher', format: 'branding-scratcher' },
-
-    { pattern: 'branding uncover', format: 'branding-uncover' },
-    { pattern: 'branding-uncover', format: 'branding-uncover' },
-    { pattern: 'branding_uncover', format: 'branding-uncover' },
-    { pattern: 'brandinguncover', format: 'branding-uncover' },
-    { pattern: 'uncover', format: 'branding-uncover' },
-
-    { pattern: 'branding sklik', format: 'branding-sklik' },
-    { pattern: 'branding-sklik', format: 'branding-sklik' },
-    { pattern: 'branding_sklik', format: 'branding-sklik' },
-
-    { pattern: 'spincube', format: 'spincube' },
-    { pattern: 'spin cube', format: 'spincube' },
-    { pattern: 'spin-cube', format: 'spincube' },
-    { pattern: 'spin_cube', format: 'spincube' },
-
-    { pattern: 'spinner', format: 'spinner' },
-
-    // Interscroller patterns
-    { pattern: 'mobilni-interscroller', format: 'mobilni-interscroller' },
-    { pattern: 'mobilni_interscroller', format: 'mobilni-interscroller' },
-    { pattern: 'mobilni interscroller', format: 'mobilni-interscroller' },
-    { pattern: 'interscroller', format: 'interscroller' },
-    { pattern: 'inter-scroller', format: 'interscroller' },
-    { pattern: 'inter_scroller', format: 'interscroller' },
-
-    { pattern: 'exclusive desktop', format: 'exclusive-desktop' },
-    { pattern: 'exclusive-desktop', format: 'exclusive-desktop' },
-    { pattern: 'exclusive_desktop', format: 'exclusive-desktop' },
-    { pattern: 'exclusivedesktop', format: 'exclusive-desktop' },
-
-    { pattern: 'vanocni', format: 'vanocni' },
-    { pattern: 'vanoce', format: 'vanocni' },
-    { pattern: 'vánoční', format: 'vanocni' },
-    { pattern: 'vánoce', format: 'vanocni' },
-
-    { pattern: 'obecna', format: 'obecna' },
-    { pattern: 'obecná', format: 'obecna' }
-  ];
-
-  // Check each pattern
-  for (const { pattern, format } of formatPatterns) {
-    if (pathLower.includes(pattern)) {
-      return format;
-    }
-  }
-
-  return null;
-}
+// detectSystemFromPath() and detectFormatFromPath() moved to specs-rules.js
 
 // =============================================================================
 // CAMPAIGN TABLE PARSER
@@ -2368,8 +2220,8 @@ async function validateCompatibility() {
       }
     }
 
-    // Check against all networks and tiers
-    const networks = ['ADFORM', 'SOS', 'ONEGAR', 'SKLIK'];
+    // Check against all networks and tiers (using centralized helpers from specs-rules.js)
+    const networks = getAllNetworks();
 
     for (const network of networks) {
       // Check if format is allowed for this system
@@ -2377,8 +2229,18 @@ async function validateCompatibility() {
         continue; // Skip validation for disallowed systems
       }
 
-      // SOS: Only HIGH tier (no LOW tier)
-      const tiers = network === 'SOS' ? ['HIGH'] : ['HIGH', 'LOW'];
+      // Determine tiers based on network capabilities
+      let tiers;
+      if (!networkHasTiers(network)) {
+        // Networks without tiers (HP_EXCLUSIVE, GOOGLE_ADS)
+        tiers = [null];
+      } else if (network === 'SOS') {
+        // SOS only has HIGH tier
+        tiers = ['HIGH'];
+      } else {
+        // Other tiered networks have HIGH and LOW
+        tiers = ['HIGH', 'LOW'];
+      }
 
       for (const tier of tiers) {
         const matches = findMatchingFormats(fileData, network, tier);
@@ -2411,72 +2273,6 @@ async function validateCompatibility() {
               reason: validation.issues.join(', ')
             });
           }
-        }
-      }
-    }
-
-    // Check HP EXCLUSIVE (no tier) - only if format is allowed
-    if (!fileData.detectedFormat || isFormatAllowedForSystem(fileData.detectedFormat, 'HP_EXCLUSIVE')) {
-      const exclusiveMatches = findMatchingFormats(fileData, 'HP_EXCLUSIVE', null);
-      for (const match of exclusiveMatches) {
-        // If campaign table exists, only validate dimensions that are in the requirements
-        if (requiredDimensions.size > 0 && fileData.dimensions && !requiredDimensions.has(fileData.dimensions)) {
-          continue; // Skip this file - dimensions not in campaign table
-        }
-
-        const validation = validateFileForFormat(fileData, match.spec);
-
-        // Size violations are warnings, not blocking errors - only check validation.valid
-        if (validation.valid) {
-          compatible.push({
-            network: 'HP_EXCLUSIVE',
-            tier: null,
-            format: match.specKey,
-            formatDisplay: match.formatDisplay,
-            spec: match.spec,
-            warnings: validation.warnings || []
-          });
-        } else {
-          incompatible.push({
-            network: 'HP_EXCLUSIVE',
-            tier: null,
-            format: match.specKey,
-            formatDisplay: match.formatDisplay,
-            reason: validation.issues.join(', ')
-          });
-        }
-      }
-    }
-
-    // Check GOOGLE_ADS (no tier) - only if format is allowed
-    if (!fileData.detectedFormat || isFormatAllowedForSystem(fileData.detectedFormat, 'GOOGLE_ADS')) {
-      const googleAdsMatches = findMatchingFormats(fileData, 'GOOGLE_ADS', null);
-      for (const match of googleAdsMatches) {
-        // If campaign table exists, only validate dimensions that are in the requirements
-        if (requiredDimensions.size > 0 && fileData.dimensions && !requiredDimensions.has(fileData.dimensions)) {
-          continue; // Skip this file - dimensions not in campaign table
-        }
-
-        const validation = validateFileForFormat(fileData, match.spec);
-
-        // Size violations are warnings, not blocking errors - only check validation.valid
-        if (validation.valid) {
-          compatible.push({
-            network: 'GOOGLE_ADS',
-            tier: null,
-            format: match.specKey,
-            formatDisplay: match.formatDisplay,
-            spec: match.spec,
-            warnings: validation.warnings || []
-          });
-        } else {
-          incompatible.push({
-            network: 'GOOGLE_ADS',
-            tier: null,
-            format: match.specKey,
-            formatDisplay: match.formatDisplay,
-            reason: validation.issues.join(', ')
-          });
         }
       }
     }
@@ -2939,15 +2735,15 @@ function displayTableValidation() {
 }
 
 function calculateNetworkStats() {
-  // Initialize stats for all networks
-  const networks = ['ADFORM', 'SOS', 'ONEGAR', 'SKLIK', 'HP_EXCLUSIVE', 'GOOGLE_ADS'];
+  // Initialize stats for all networks using centralized helpers from specs-rules.js
+  const networks = getAllNetworks();
   const tiers = ['HIGH', 'LOW'];
 
   for (const network of networks) {
     appState.networkStats[network] = {};
 
-    if (network === 'HP_EXCLUSIVE' || network === 'GOOGLE_ADS') {
-      // HP_EXCLUSIVE and GOOGLE_ADS have no tiers
+    if (!networkHasTiers(network)) {
+      // Networks without tiers (HP_EXCLUSIVE, GOOGLE_ADS)
       appState.networkStats[network].NONE = {
         eligibleAssets: 0,
         totalAssets: appState.uploadedFiles.length,
@@ -2956,7 +2752,7 @@ function calculateNetworkStats() {
         errorFiles: []
       };
     } else {
-      // Other networks have HIGH and LOW tiers
+      // Networks with HIGH and LOW tiers
       for (const tier of tiers) {
         appState.networkStats[network][tier] = {
           eligibleAssets: 0,
@@ -3010,13 +2806,8 @@ function calculateNetworkStats() {
       }
     }
 
-    // Rich media formats filter - SOS only
-    if (file.assignedFormat) {
-      const fileFormat = file.assignedFormat.toLowerCase();
-      const sosOnlyFormats = ['spincube', 'spinner', 'branding-scratcher', 'branding-uncover', 'branding-videopanel', 'branding'];
-      const isRichMediaFormat = sosOnlyFormats.some(f => fileFormat.includes(f) || fileFormat === f);
-      // Rich media files are only valid for SOS - skip counting for other networks handled below
-    }
+    // Rich media formats filter - SOS only (using centralized list from specs-rules.js)
+    const sosOnlyFormats = getSOSExclusiveFormats();
 
     const fileCompatibleNetworks = new Set();
 
@@ -3028,7 +2819,6 @@ function calculateNetworkStats() {
       // Skip rich media formats on non-SOS networks
       if (file.assignedFormat) {
         const fileFormat = file.assignedFormat.toLowerCase();
-        const sosOnlyFormats = ['spincube', 'spinner', 'branding-scratcher', 'branding-uncover', 'branding-videopanel', 'branding'];
         const isRichMediaFormat = sosOnlyFormats.some(f => fileFormat.includes(f) || fileFormat === f);
         if (isRichMediaFormat && network !== 'SOS') {
           continue;
@@ -3406,8 +3196,8 @@ function buildExportPreviewWithCheckboxes(network) {
       const fileFormat = file.assignedFormat.toLowerCase();
 
       // Rich media formats are SOS-only - they should not appear on other networks
-      const sosOnlyFormats = ['spincube', 'spinner', 'branding-scratcher', 'branding-uncover', 'branding-videopanel', 'branding'];
-      const isRichMediaFormat = sosOnlyFormats.some(f => fileFormat.includes(f) || fileFormat === f);
+      const sosExclusiveFormats = getSOSExclusiveFormats();
+      const isRichMediaFormat = sosExclusiveFormats.some(f => fileFormat.includes(f) || fileFormat === f);
 
       if (isRichMediaFormat && network !== 'SOS') {
         continue;
@@ -3817,8 +3607,8 @@ function buildValidDetails(network) {
 
       // Rich media formats are SOS-only - they should not appear on other networks
       // These have matching dimensions with standard banners but are distinct creative types
-      const sosOnlyFormats = ['spincube', 'spinner', 'branding-scratcher', 'branding-uncover', 'branding-videopanel', 'branding'];
-      const isRichMediaFormat = sosOnlyFormats.some(f => fileFormat.includes(f) || fileFormat === f);
+      const sosExclusiveFormats = getSOSExclusiveFormats();
+      const isRichMediaFormat = sosExclusiveFormats.some(f => fileFormat.includes(f) || fileFormat === f);
 
       if (isRichMediaFormat && network !== 'SOS') {
         // Skip rich media files on non-SOS networks

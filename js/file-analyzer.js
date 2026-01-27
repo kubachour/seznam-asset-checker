@@ -210,46 +210,10 @@ function getFileFormat(file) {
 }
 
 // =============================================================================
-// FORMAT DETECTION PATTERNS (Data-driven approach for DRY code)
+// FORMAT DETECTION PATTERNS
 // =============================================================================
-
-/**
- * Format detection patterns - defines keywords and their mappings
- * Each pattern has: keywords (array), format, system, confidence
- */
-const FORMAT_PATTERNS = [
-  // Social media (exclude from all ad systems)
-  { keywords: ['social-media', 'facebook', 'linkedin', 'twitter', 'instagram', 'tiktok'], format: 'social-media', system: null, confidence: 'high', isSocialMedia: true },
-
-  // SOS-exclusive formats (high confidence)
-  { keywords: ['spincube', 'spin-cube'], format: 'spincube', system: 'SOS', confidence: 'high' },
-  { keywords: ['inarticle', 'in-article', 'in-articl'], format: 'inarticle', system: 'SOS', confidence: 'high' },
-  { keywords: ['exclusive'], format: 'exclusive', system: 'SOS', confidence: 'high' },
-  { keywords: ['spinner'], format: 'spinner', system: 'SOS', confidence: 'high' },
-
-  // Branding variants (standalone keywords for backward compatibility)
-  { keywords: ['scratcher', 'scratch'], format: 'branding-scratcher', system: 'SOS', confidence: 'high' },
-  { keywords: ['uncover'], format: 'branding-uncover', system: 'SOS', confidence: 'high' },
-  { keywords: ['videopanel'], format: 'branding-videopanel', system: 'SOS', confidence: 'high' },
-
-  // Multi-system formats
-  { keywords: ['interscroller', 'inter-scroller'], format: 'interscroller', system: null, confidence: 'high' },
-  { keywords: ['kombi'], format: 'kombi', system: null, confidence: 'medium' },
-  { keywords: ['html5', 'html-5'], format: 'html5-banner', system: null, confidence: 'medium' },
-
-  // Google Ads / UAC
-  { keywords: ['uac', 'google-ads', 'googleads'], format: 'uac', system: 'GOOGLE_ADS', confidence: 'high' }
-];
-
-/**
- * Branding sub-type mappings for special handling
- */
-const BRANDING_SUBTYPES = {
-  'scratcher': 'branding-scratcher',
-  'scratch': 'branding-scratcher',
-  'uncover': 'branding-uncover',
-  'videopanel': 'branding-videopanel'
-};
+// FORMAT_PATTERNS and BRANDING_SUBTYPES are now defined in specs-rules.js
+// and available globally when scripts are loaded in browser
 
 /**
  * Detect format type from filename and folder path
