@@ -170,11 +170,11 @@ function generateURL(params) {
       utmMedium = formatName === 'kombi' ? 'kombi_selfpromo' : `banner_selfpromo_${tier.toLowerCase()}`;
       utmCampaign = campaignName; // Campaign name ONLY, no additions
       utmContent = contentName ? `${campaignName}-${contentName}_${formatName}${placement ? '_' + placement : ''}` : `${campaignName}-content_${formatName}${placement ? '_' + placement : ''}`;
-      utmTerm = placement ? `${formatName}_${placement}` : formatName;
+      utmTerm = placement ? `${fileData.dimensions}_${placement}` : fileData.dimensions;
       break;
 
     case 'SKLIK':
-      // SKLIK: utm_campaign can have optional additions (dynamic)
+      // SKLIK: No tier distinction
       utmSource = 'seznam_sklik';
 
       if (formatName === 'kombi') {
@@ -182,12 +182,11 @@ function generateURL(params) {
       } else if (formatName.includes('interscroller')) {
         utmMedium = 'interscroller_selfpromo';
       } else if (formatName.includes('branding')) {
-        utmMedium = `branding_selfpromo_${tier.toLowerCase()}`;
+        utmMedium = 'branding_selfpromo';
       } else {
-        utmMedium = `banner_selfpromo_${tier.toLowerCase()}`;
+        utmMedium = 'banner_selfpromo';
       }
 
-      // utm_campaign: campaign name + optional additions (kept flexible for Sklik)
       utmCampaign = campaignName;
       utmContent = contentName ? `${campaignName}-${contentName}_${formatName}${placement ? '_' + placement : ''}` : `${campaignName}-content_${formatName}${placement ? '_' + placement : ''}`;
       utmTerm = placement ? `${formatName}_${placement}` : formatName;

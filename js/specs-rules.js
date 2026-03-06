@@ -122,21 +122,21 @@ const CREATIVE_SPECS = {
     },
     'inarticle': {
       name: 'Inarticle',
-      dimensions: ['640x480', '338x190', '400x300', '800x533', '1200x628', '1200x1200'],
+      dimensions: ['640x480', '338x190'],
       maxSize: 500, // UPDATED: 500 KB limit for inarticle
       formats: ['jpg', 'png'],
       device: 'Desktop/Mobil',
       tier: ['HIGH'],
-      notes: 'Inarticle placement. 500KB limit. Various dimensions supported.'
+      notes: 'Inarticle placement. 500KB limit.'
     },
     'nativni-inzerat': {
       name: 'Nativní inzerát (In-article)',
-      dimensions: ['640x480', '338x190', '400x300', '800x533'],
+      dimensions: ['640x480', '338x190'],
       maxSize: 500, // UPDATED: 500 KB limit to match inarticle
       formats: ['jpg', 'png'],
       device: 'Desktop/Mobil',
       tier: ['HIGH'],
-      notes: 'In-article placement. Various dimensions supported.'
+      notes: 'In-article placement.'
     },
     'spincube': {
       name: 'Spincube',
@@ -171,15 +171,6 @@ const CREATIVE_SPECS = {
       fileRoles: ['side1', 'side2', 'side3', 'side4'],
       notes: '4× 300×600 banners required (or 2 used twice). Each can have different target URL. Must be visually distinct from page content.'
     },
-    'exclusive': {
-      name: 'Exclusive',
-      dimensions: ['480x480', '480x300', '461x100', '1100x500'],
-      maxSize: 300,
-      formats: ['jpg', 'png', 'gif'],
-      device: 'Desktop/Mobil',
-      tier: ['HIGH'],
-      notes: 'Exclusive format for SOS. Various dimensions.'
-    }
   },
 
   // =============================================================================
@@ -246,7 +237,7 @@ const CREATIVE_SPECS = {
   },
 
   // =============================================================================
-  // SKLIK SPECIFICATIONS (HIGH & LOW tiers)
+  // SKLIK SPECIFICATIONS (No tier distinction)
   // =============================================================================
   SKLIK: {
     'wallpaper': {
@@ -254,48 +245,42 @@ const CREATIVE_SPECS = {
       dimensions: ['480x300'],
       maxSize: 250,
       formats: ['jpg', 'png', 'gif', 'html5'],
-      device: 'Desktop/Mobil',
-      tier: ['HIGH', 'LOW']
+      device: 'Desktop/Mobil'
     },
     'leaderboard': {
       name: 'Leaderboard',
       dimensions: ['970x210'],
       maxSize: 250,
       formats: ['jpg', 'png', 'gif', 'html5'],
-      device: 'Desktop',
-      tier: ['HIGH', 'LOW']
+      device: 'Desktop'
     },
     'sponzor-sluzby': {
       name: 'Sponzor služby',
       dimensions: ['300x250'],
       maxSize: 250,
       formats: ['jpg', 'png', 'gif', 'html5'],
-      device: 'Desktop',
-      tier: ['HIGH', 'LOW']
+      device: 'Desktop'
     },
     'rectangle': {
       name: 'Rectangle',
       dimensions: ['970x310'],
       maxSize: 250,
       formats: ['jpg', 'png', 'gif', 'html5'],
-      device: 'Desktop',
-      tier: ['HIGH', 'LOW']
+      device: 'Desktop'
     },
     'skyscraper': {
       name: 'Skyscraper',
       dimensions: ['300x600'],
       maxSize: 250,
       formats: ['jpg', 'png', 'gif', 'html5'],
-      device: 'Desktop',
-      tier: ['HIGH', 'LOW']
+      device: 'Desktop'
     },
     'mobilni-square': {
       name: 'Mobilní square',
       dimensions: ['300x300', '480x480'],
       maxSize: 250,
       formats: ['jpg', 'png', 'gif', 'html5'],
-      device: 'Mobil',
-      tier: ['HIGH', 'LOW']
+      device: 'Mobil'
     },
     'kombi': {
       name: 'Nativní inzerát / Kombi',
@@ -303,7 +288,6 @@ const CREATIVE_SPECS = {
       maxSize: 1024, // 1 MB
       formats: ['jpg', 'png', 'gif', 'webp', 'avif'],
       device: 'Desktop/Mobil',
-      tier: ['HIGH', 'LOW'],
       notes: 'Banner bez textu (pro nativ). Recommended: 1200×628 / 1200×1200. Max: 4000px width/height.'
     },
     'leaderboard-middle': {
@@ -311,24 +295,21 @@ const CREATIVE_SPECS = {
       dimensions: ['728x90'],
       maxSize: 250,
       formats: ['jpg', 'png', 'gif'],
-      device: 'Desktop',
-      tier: ['HIGH', 'LOW']
+      device: 'Desktop'
     },
     'mobilni-leaderboard': {
       name: 'Mobilní leaderboard',
       dimensions: ['320x100'],
       maxSize: 250,
       formats: ['jpg', 'png', 'gif'],
-      device: 'Mobil',
-      tier: ['HIGH', 'LOW']
+      device: 'Mobil'
     },
     'skyscraper-sticky': {
       name: 'Skyscraper sticky',
       dimensions: ['160x600'],
       maxSize: 250,
       formats: ['jpg', 'png', 'gif', 'html5'],
-      device: 'Desktop',
-      tier: ['HIGH', 'LOW']
+      device: 'Desktop'
     },
     'mobilni-interscroller': {
       name: 'Mobilní Interscroller',
@@ -336,7 +317,6 @@ const CREATIVE_SPECS = {
       maxSize: 250,
       formats: ['jpg', 'png', 'gif', 'webp', 'avif'],
       device: 'Mobil',
-      tier: ['HIGH', 'LOW'],
       notes: 'Safe zone: 700×920px for main message. Podporuje HTML5.'
     }
   },
@@ -525,7 +505,7 @@ const FORMAT_SYSTEM_MAPPING = {
   // SOS-exclusive formats (only deployed to SOS, HIGH tier only)
   'inarticle': ['SOS'],
   'spincube': ['SOS'],
-  'exclusive': ['SOS'],
+  'exclusive': ['HP_EXCLUSIVE'],
   'branding-scratcher': ['SOS'],
   'branding-uncover': ['SOS'],
   'branding-videopanel': ['SOS'],
@@ -678,7 +658,7 @@ const FORMAT_PATTERNS = [
   // SOS-exclusive formats (high confidence)
   { keywords: ['spincube', 'spin-cube'], format: 'spincube', system: 'SOS', confidence: 'high' },
   { keywords: ['inarticle', 'in-article', 'in-articl'], format: 'inarticle', system: 'SOS', confidence: 'high' },
-  { keywords: ['exclusive'], format: 'exclusive', system: 'SOS', confidence: 'high' },
+  { keywords: ['exclusive'], format: 'exclusive', system: 'HP_EXCLUSIVE', confidence: 'high' },
   { keywords: ['spinner'], format: 'spinner', system: 'SOS', confidence: 'high' },
 
   // Branding variants (standalone keywords for backward compatibility)

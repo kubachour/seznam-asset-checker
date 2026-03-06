@@ -5,7 +5,7 @@
 // GLOBAL STATE
 // =============================================================================
 
-const APP_VERSION = 'v1.5.22'; // Fix Skyscraper sticky and Kombi dimensions
+const APP_VERSION = 'v1.5.23'; // Fix specs, tiers, navigation, and format mappings
 
 // =============================================================================
 // SECURITY HELPERS
@@ -148,7 +148,18 @@ document.addEventListener('DOMContentLoaded', () => {
   setupEventListeners();
 
   // Initialize step 1
+  history.replaceState({ step: 1 }, '');
   goToStep(1);
+});
+
+// Browser back/forward button support
+let _navigatingFromPopstate = false;
+window.addEventListener('popstate', (event) => {
+  if (event.state && event.state.step) {
+    _navigatingFromPopstate = true;
+    goToStep(event.state.step);
+    _navigatingFromPopstate = false;
+  }
 });
 
 // =============================================================================
@@ -654,6 +665,11 @@ function goToStep(stepNumber) {
       step.classList.add('active');
     }
   });
+
+  // Push browser history state (skip if navigating via popstate to avoid duplicates)
+  if (!_navigatingFromPopstate) {
+    history.pushState({ step: stepNumber }, '');
+  }
 
   // Refresh displays when navigating to steps
   if (stepNumber === 2 && appState.campaignRequirements.length > 0) {
@@ -1398,13 +1414,20 @@ function parseCampaignTableText(text) {
 
       // SOS-exclusive format detection - auto-assign to SOS system
       const sosFormats = ['in-article', 'inarticle', 'branding', 'spincube', 'spinner',
-                         'scratcher', 'uncover', 'interscroller', 'interactive', 'exclusive'];
+                         'scratcher', 'uncover', 'interscroller', 'interactive'];
       const isSosFormat = sosFormats.some(format => nameLower.includes(format));
 
       if (isSosFormat) {
         currentRequirement.autoAssignSystem = 'SOS';
         currentRequirement.isSosExclusive = true;
         console.log(`    → Detected SOS-exclusive format, auto-assigning to SOS`);
+      }
+
+      // HP Exclusive format detection - auto-assign to HP_EXCLUSIVE system
+      if (nameLower.includes('exclusive')) {
+        currentRequirement.autoAssignSystem = 'HP_EXCLUSIVE';
+        currentRequirement.isSosExclusive = false;
+        console.log(`    → Detected Exclusive format, auto-assigning to HP_EXCLUSIVE`);
       }
 
       requirements.push(currentRequirement);
@@ -2232,7 +2255,7 @@ async function validateCompatibility() {
       // Determine tiers based on network capabilities
       let tiers;
       if (!networkHasTiers(network)) {
-        // Networks without tiers (HP_EXCLUSIVE, GOOGLE_ADS)
+        // Networks without tiers (HP_EXCLUSIVE, SKLIK, GOOGLE_ADS)
         tiers = [null];
       } else if (network === 'SOS') {
         // SOS only has HIGH tier
@@ -2743,7 +2766,7 @@ function calculateNetworkStats() {
     appState.networkStats[network] = {};
 
     if (!networkHasTiers(network)) {
-      // Networks without tiers (HP_EXCLUSIVE, GOOGLE_ADS)
+      // Networks without tiers (HP_EXCLUSIVE, SKLIK, GOOGLE_ADS)
       appState.networkStats[network].NONE = {
         eligibleAssets: 0,
         totalAssets: appState.uploadedFiles.length,
@@ -3040,7 +3063,7 @@ function displayNetworkSelection() {
   for (const stats of networkAggregates) {
     const isSOS = stats.network === 'SOS';
     const hasHPExclusive = stats.network === 'HP_EXCLUSIVE';
-    const showTierSelector = !hasHPExclusive;
+    const showTierSelector = !(stats.network === 'HP_EXCLUSIVE' || stats.network === 'SKLIK');
 
     html += `
       <div class="network-selection-card" id="network-card-${stats.network}" style="border: 2px solid #10b981; border-radius: 12px; padding: 20px; background: #f0fdf4; transition: all 0.2s;">
@@ -3905,8 +3928,8 @@ function updateSelectedNetworks() {
       if (network === 'SOS') {
         // SOS only has HIGH tier
         tiers = ['HIGH'];
-      } else if (network === 'HP_EXCLUSIVE' || network === 'GOOGLE_ADS') {
-        // HP_EXCLUSIVE and GOOGLE_ADS have no tiers
+      } else if (network === 'HP_EXCLUSIVE' || network === 'SKLIK' || network === 'GOOGLE_ADS') {
+        // HP_EXCLUSIVE, SKLIK and GOOGLE_ADS have no tiers
         tiers = ['NONE'];
       } else if (tierSelect) {
         const tierValue = tierSelect.value;
@@ -4014,7 +4037,7 @@ function updateCampaignTier(tier) {
  * @returns {string} HTML for the tier section
  */
 function buildNetworkTierSection(network, tier, selection, campaignName, contentName, landingURL) {
-  const tierKey = network === 'HP_EXCLUSIVE' ? 'NONE' : tier;
+  const tierKey = (network === 'HP_EXCLUSIVE' || network === 'SKLIK') ? 'NONE' : tier;
   const stats = appState.networkStats[network][tierKey];
 
   if (!stats) return '';
@@ -4028,7 +4051,7 @@ function buildNetworkTierSection(network, tier, selection, campaignName, content
     }
 
     const matches = validation.compatible.filter(c =>
-      c.network === network && (c.tier === tier || (network === 'HP_EXCLUSIVE' && !c.tier))
+      c.network === network && (c.tier === tier || ((network === 'HP_EXCLUSIVE' || network === 'SKLIK') && !c.tier))
     );
 
     if (matches.length > 0) {
@@ -4046,10 +4069,10 @@ function buildNetworkTierSection(network, tier, selection, campaignName, content
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
         <div>
           <h3 style="margin: 0; font-size: 22px; color: #1f2937;">
-            <span style="cursor: help; border-bottom: 1px dotted #6b7280;" title="${getNetworkTooltip(network)}">${network.replace('_', ' ')}</span> - ${tier} Tier
+            <span style="cursor: help; border-bottom: 1px dotted #6b7280;" title="${getNetworkTooltip(network)}">${network.replace('_', ' ')}</span>${(network === 'HP_EXCLUSIVE' || network === 'SKLIK') ? '' : ` - ${tier} Tier`}
           </h3>
           <div style="font-size: 14px; color: #6b7280; margin-top: 5px;">
-            Tier kampaně: <strong>${network === 'HP_EXCLUSIVE' ? 'N/A' : tier}</strong>
+            Tier kampaně: <strong>${(network === 'HP_EXCLUSIVE' || network === 'SKLIK') ? 'N/A' : tier}</strong>
           </div>
         </div>
         <div style="text-align: right;">
@@ -4296,7 +4319,7 @@ function updateBannerURL(fileId, network, tier, fileIndex) {
   const eligibleFiles = [];
   for (const [fileName, validation] of Object.entries(appState.validationResults)) {
     const matches = validation.compatible.filter(c =>
-      c.network === network && (c.tier === tier || (network === 'HP_EXCLUSIVE' && !c.tier))
+      c.network === network && (c.tier === tier || ((network === 'HP_EXCLUSIVE' || network === 'SKLIK') && !c.tier))
     );
     if (matches.length > 0) {
       eligibleFiles.push({
@@ -4373,7 +4396,7 @@ async function exportNetworkZIP(network, tier) {
       }
 
       const matches = validation.compatible.filter(c =>
-        c.network === network && (c.tier === tier || (network === 'HP_EXCLUSIVE' && !c.tier))
+        c.network === network && (c.tier === tier || ((network === 'HP_EXCLUSIVE' || network === 'SKLIK') && !c.tier))
       );
 
       if (matches.length > 0) {
@@ -4504,7 +4527,7 @@ async function exportNetworkZIP(network, tier) {
 
     // Generate ZIP and download
     const blob = await zip.generateAsync({ type: 'blob' });
-    const filename = `${network}_${network === 'HP_EXCLUSIVE' ? 'Package' : tier + '_Tier'}_${Date.now()}.zip`;
+    const filename = `${network}_${(network === 'HP_EXCLUSIVE' || network === 'SKLIK') ? 'Package' : tier + '_Tier'}_${Date.now()}.zip`;
     downloadBlob(blob, filename);
 
     alert(`✅ Balíček úspěšně vyexportován!\n\nObsah:\n- ${eligibleFiles.length} bannerů\n- export.xlsx s URL detaily`);
@@ -4537,7 +4560,7 @@ async function exportAllNetworksZIP() {
     // Process each selected network
     for (const selection of appState.selectedNetworks) {
       const network = selection.network;
-      const tiers = network === 'HP_EXCLUSIVE' ? ['NONE'] : ['LOW', 'HIGH'];
+      const tiers = (network === 'HP_EXCLUSIVE' || network === 'SKLIK') ? ['NONE'] : ['LOW', 'HIGH'];
 
       for (const tier of tiers) {
         // Get eligible files for this network and tier
@@ -4548,7 +4571,7 @@ async function exportAllNetworksZIP() {
           }
 
           const matches = validation.compatible.filter(c =>
-            c.network === network && (c.tier === tier || (network === 'HP_EXCLUSIVE' && !c.tier))
+            c.network === network && (c.tier === tier || ((network === 'HP_EXCLUSIVE' || network === 'SKLIK') && !c.tier))
           );
 
           if (matches.length > 0) {
@@ -4563,7 +4586,7 @@ async function exportAllNetworksZIP() {
         if (eligibleFiles.length === 0) continue;
 
         // Create folder for this network/tier
-        const folderName = network === 'HP_EXCLUSIVE' ? network : `${network}_${tier}`;
+        const folderName = (network === 'HP_EXCLUSIVE' || network === 'SKLIK') ? network : `${network}_${tier}`;
         const networkFolder = masterZip.folder(folderName);
 
         // Add banner files with renamed names
