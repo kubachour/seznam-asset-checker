@@ -122,8 +122,8 @@ const CREATIVE_SPECS = {
     },
     'inarticle': {
       name: 'Inarticle',
-      dimensions: ['640x480', '338x190'],
-      maxSize: 500, // UPDATED: 500 KB limit for inarticle
+      dimensions: ['640x480', '338x190', '338x338'],
+      maxSize: 500, // 500 KB limit for inarticle
       formats: ['jpg', 'png'],
       device: 'Desktop/Mobil',
       tier: ['HIGH'],
@@ -131,8 +131,8 @@ const CREATIVE_SPECS = {
     },
     'nativni-inzerat': {
       name: 'Nativní inzerát (In-article)',
-      dimensions: ['640x480', '338x190'],
-      maxSize: 500, // UPDATED: 500 KB limit to match inarticle
+      dimensions: ['640x480', '338x190', '338x338'],
+      maxSize: 500, // 500 KB limit to match inarticle
       formats: ['jpg', 'png'],
       device: 'Desktop/Mobil',
       tier: ['HIGH'],
