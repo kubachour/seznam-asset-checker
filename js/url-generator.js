@@ -169,8 +169,11 @@ function generateURL(params) {
       utmSource = 'seznam_onegar';
       utmMedium = formatName === 'kombi' ? 'kombi_selfpromo' : `banner_selfpromo_${tier.toLowerCase()}`;
       utmCampaign = campaignName; // Campaign name ONLY, no additions
-      utmContent = contentName ? `${campaignName}-${contentName}_${formatName}${placement ? '_' + placement : ''}` : `${campaignName}-content_${formatName}${placement ? '_' + placement : ''}`;
-      utmTerm = placement ? `${fileData.dimensions}_${placement}` : fileData.dimensions;
+      // utm_content: CAMPAIGN_NAME-CONTENT-BANNER-SIZE
+      utmContent = contentName
+        ? `${campaignName}-${contentName}-banner-${fileData.dimensions}`
+        : `${campaignName}-content-banner-${fileData.dimensions}`;
+      utmTerm = placement ? `${formatName}_${placement}` : formatName;
       break;
 
     case 'SKLIK':
