@@ -5,7 +5,7 @@
 // GLOBAL STATE
 // =============================================================================
 
-const APP_VERSION = 'v1.5.21'; // Centralized asset definitions in specs-rules.js
+const APP_VERSION = 'v1.5.22'; // Fix Skyscraper sticky and Kombi dimensions
 
 // =============================================================================
 // SECURITY HELPERS

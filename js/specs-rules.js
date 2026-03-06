@@ -236,12 +236,12 @@ const CREATIVE_SPECS = {
     },
     'kombi': {
       name: 'Nativní inzerát / Kombi',
-      dimensions: ['1200x628', '1200x1200', '600x314', '300x300'],
+      dimensions: ['1200x628', '1200x1200'],
       maxSize: 1024, // 1 MB
       formats: ['jpg', 'png', 'gif', 'webp', 'avif'],
       device: 'Desktop/Mobil',
       tier: ['HIGH', 'LOW'],
-      notes: 'Banner bez textu (pro nativ). Min: 600×314 (rect) / 300×300 (square). Recommended: 1200×628 / 1200×1200.'
+      notes: 'Banner bez textu (pro nativ). Recommended: 1200×628 / 1200×1200.'
     }
   },
 
@@ -299,12 +299,12 @@ const CREATIVE_SPECS = {
     },
     'kombi': {
       name: 'Nativní inzerát / Kombi',
-      dimensions: ['1200x628', '1200x1200', '600x314', '300x300'],
+      dimensions: ['1200x628', '1200x1200'],
       maxSize: 1024, // 1 MB
       formats: ['jpg', 'png', 'gif', 'webp', 'avif'],
       device: 'Desktop/Mobil',
       tier: ['HIGH', 'LOW'],
-      notes: 'Banner bez textu (pro nativ). Min: 600×314 (rect) / 300×300 (square). Recommended: 1200×628 / 1200×1200. Max: 4000px width/height.'
+      notes: 'Banner bez textu (pro nativ). Recommended: 1200×628 / 1200×1200. Max: 4000px width/height.'
     },
     'leaderboard-middle': {
       name: 'Leaderboard middle',
@@ -324,7 +324,7 @@ const CREATIVE_SPECS = {
     },
     'skyscraper-sticky': {
       name: 'Skyscraper sticky',
-      dimensions: ['160x600', '300x600'],
+      dimensions: ['160x600'],
       maxSize: 250,
       formats: ['jpg', 'png', 'gif', 'html5'],
       device: 'Desktop',
