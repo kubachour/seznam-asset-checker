@@ -227,7 +227,7 @@ function detectFormatFromName(filename, folderPath = '') {
 
   // Check for branding formats with systematic second-word parsing (special handling)
   if (searchText.includes('branding')) {
-    const brandingMatch = searchText.match(/branding[\s-]+(scratcher|scratch|uncover|videopanel)/i);
+    const brandingMatch = searchText.match(/branding[\s_/.-]*(scratcher|scratch|uncover|videopanel)/i);
 
     if (brandingMatch?.[1]) {
       const subType = brandingMatch[1].toLowerCase();

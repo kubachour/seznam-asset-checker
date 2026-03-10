@@ -121,6 +121,11 @@ function getVariantOptions(formatName) {
     return ['banner'];
   }
 
+  // MobilFlip has 2 sides
+  if (formatName === 'mobilni-flip') {
+    return ['side_a', 'side_b'];
+  }
+
   return [];
 }
 

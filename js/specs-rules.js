@@ -150,6 +150,18 @@ const CREATIVE_SPECS = {
       fileRoles: ['banner'],
       notes: '4x 480x480 banners required, potřeba důkladně pročíst požadavky v odkaze'
     },
+    'mobilni-flip': {
+      name: 'Mobilní Flip',
+      dimensions: ['480x480'],
+      maxSize: 250,
+      formats: ['jpg', 'png', 'gif'],
+      device: 'Mobil',
+      tier: ['HIGH'],
+      multiFile: true,
+      fileCount: 2,
+      fileRoles: ['side_a', 'side_b'],
+      notes: '2× 480×480 banners required (A and B side). Variant of spincube with 2 sides.'
+    },
     'mobilni-interscroller': {
       name: 'Mobilní Interscroller',
       dimensions: ['720x1280'],
@@ -510,6 +522,7 @@ const FORMAT_SYSTEM_MAPPING = {
   'branding-uncover': ['SOS'],
   'branding-videopanel': ['SOS'],
   'spinner': ['SOS'],
+  'mobilni-flip': ['SOS'],
   'nativni-inzerat': ['SOS'], // In-article / native ad
 
   // Branding - SOS and SKLIK
@@ -660,6 +673,7 @@ const FORMAT_PATTERNS = [
   { keywords: ['inarticle', 'in-article', 'in-articl'], format: 'inarticle', system: 'SOS', confidence: 'high' },
   { keywords: ['exclusive'], format: 'exclusive', system: 'HP_EXCLUSIVE', confidence: 'high' },
   { keywords: ['spinner'], format: 'spinner', system: 'SOS', confidence: 'high' },
+  { keywords: ['mobilflip', 'mobil flip', 'mobil-flip', 'mobilní flip'], format: 'mobilni-flip', system: 'SOS', confidence: 'high' },
 
   // Branding variants (standalone keywords for backward compatibility)
   { keywords: ['scratcher', 'scratch'], format: 'branding-scratcher', system: 'SOS', confidence: 'high' },
@@ -741,6 +755,12 @@ const PATH_FORMAT_PATTERNS = [
 
   { pattern: 'spinner', format: 'spinner' },
 
+  // MobilFlip patterns
+  { pattern: 'mobilflip', format: 'mobilni-flip' },
+  { pattern: 'mobil flip', format: 'mobilni-flip' },
+  { pattern: 'mobil-flip', format: 'mobilni-flip' },
+  { pattern: 'mobil_flip', format: 'mobilni-flip' },
+
   // Interscroller patterns
   { pattern: 'mobilni-interscroller', format: 'mobilni-interscroller' },
   { pattern: 'mobilni_interscroller', format: 'mobilni-interscroller' },
@@ -753,6 +773,7 @@ const PATH_FORMAT_PATTERNS = [
   { pattern: 'exclusive-desktop', format: 'exclusive-desktop' },
   { pattern: 'exclusive_desktop', format: 'exclusive-desktop' },
   { pattern: 'exclusivedesktop', format: 'exclusive-desktop' },
+  { pattern: 'exclusive', format: 'exclusive' },
 
   { pattern: 'vanocni', format: 'vanocni' },
   { pattern: 'vanoce', format: 'vanocni' },
@@ -782,6 +803,7 @@ function getFormatDisplayName(dimensions, specKey) {
   if (specKey && specKey.includes('branding')) return 'branding';
   if (specKey && specKey.includes('interscroller')) return 'interscroller';
   if (specKey && specKey.includes('spinner')) return 'spinner';
+  if (specKey && specKey.includes('mobilni-flip')) return 'mobilni-flip';
   if (specKey && specKey.includes('spincube')) return 'spincube';
   if (specKey && specKey.includes('kombi')) return 'kombi';
   if (specKey && specKey.includes('exclusive')) {
@@ -1069,6 +1091,30 @@ function detectMultiFileFormats(allFiles) {
   // Only files with "spincube" in name/folder are considered Spincube format
   // This prevents regular 480x480 banners from being incorrectly matched as Spincube
 
+  // Check for Mobilní Flip (2x 480x480)
+  // Similar to spincube but only 2 files, detected by "mobilflip" or "mobil flip" keyword
+  const mobilFlipByFolder = groupByFolderPath(spincubeFiles, file => {
+    if (file.isHTML5 || file.fileType === 'html5') return false;
+    const fileName = (file.name || '').toLowerCase();
+    const folderPath = (file.folderPath || '').toLowerCase();
+    const searchText = fileName + ' ' + folderPath;
+    return searchText.includes('mobilflip') || searchText.includes('mobil flip') ||
+           searchText.includes('mobil-flip') || searchText.includes('mobil_flip');
+  });
+
+  for (const folderKey in mobilFlipByFolder) {
+    const files = mobilFlipByFolder[folderKey];
+    multiFileGroups.push({
+      format: 'mobilni-flip',
+      network: 'SOS',
+      files: files,
+      complete: files.length === 2,
+      requiredCount: 2,
+      roles: ['side_a', 'side_b'],
+      folderPath: folderKey
+    });
+  }
+
   // Check for Spinner (4x 300x600)
   // First, identify Spinner files by name/folder containing "spinner"
   const skyscraperFiles = allFiles.filter(f => f.dimensions === '300x600');
@@ -1121,65 +1167,53 @@ function detectMultiFileFormats(allFiles) {
     }
   }
 
-  // Check for HP Exclusive Desktop (461x100 trigger + 1100x500 banner)
-  const triggers = allFiles.filter(f => f.dimensions === '461x100');
-  const banners = allFiles.filter(f => f.dimensions === '1100x500');
+  // Check for HP Exclusive composite (trigger 461x100 + banner 1100x500 + mobile 480x300 + mobile 480x480)
+  // All pieces with "exclusive" in folder/name are grouped into one composite per folder
+  const exclusiveDimMap = {
+    '461x100': 'trigger',
+    '1100x500': 'banner',
+    '480x300': 'mobile-wallpaper',
+    '480x480': 'mobile-square'
+  };
+  const exclusiveExpectedPieces = ['trigger', 'banner', 'mobile-wallpaper', 'mobile-square'];
 
-  // Group by folder to prevent mixing files from different folders
-  const triggersByFolder = groupByFolderPath(triggers);
-  const bannersByFolder = groupByFolderPath(banners);
+  const exclusiveFiles = allFiles.filter(f => {
+    if (!exclusiveDimMap[f.dimensions]) return false;
+    const fileName = (f.name || '').toLowerCase();
+    const folderPath = (f.folderPath || '').toLowerCase();
+    return fileName.includes('exclusive') || folderPath.includes('exclusive');
+  });
 
-  // Get all unique folder keys
-  const allFolderKeys = new Set([...Object.keys(triggersByFolder), ...Object.keys(bannersByFolder)]);
+  const exclusiveByFolder = groupByFolderPath(exclusiveFiles);
 
-  // Pair triggers with banners within each folder
-  for (const folderKey of allFolderKeys) {
-    const folderTriggers = triggersByFolder[folderKey] || [];
-    const folderBanners = bannersByFolder[folderKey] || [];
-    const pairCount = Math.min(folderTriggers.length, folderBanners.length);
-
-    // Create complete pairs
-    for (let i = 0; i < pairCount; i++) {
-      multiFileGroups.push({
-        format: 'exclusive-desktop',
-        network: 'HP_EXCLUSIVE',
-        files: [folderTriggers[i], folderBanners[i]],
-        complete: true,
-        requiredCount: 2,
-        roles: ['trigger', 'banner'],
-        folderPath: folderKey  // Store folder path for filtering
-      });
+  for (const folderKey in exclusiveByFolder) {
+    const files = exclusiveByFolder[folderKey];
+    // Categorize files by piece type
+    const pieceFiles = {};
+    const roles = [];
+    for (const file of files) {
+      const pieceType = exclusiveDimMap[file.dimensions];
+      if (!pieceFiles[pieceType]) pieceFiles[pieceType] = [];
+      pieceFiles[pieceType].push(file);
+      roles.push(pieceType);
     }
 
-    // If unpaired triggers, mark as incomplete
-    if (folderTriggers.length > pairCount) {
-      for (let i = pairCount; i < folderTriggers.length; i++) {
-        multiFileGroups.push({
-          format: 'exclusive-desktop',
-          network: 'HP_EXCLUSIVE',
-          files: [folderTriggers[i]],
-          complete: false,
-          requiredCount: 2,
-          roles: ['trigger', 'banner'],
-          folderPath: folderKey  // Store folder path for filtering
-        });
-      }
-    }
+    const foundPieces = Object.keys(pieceFiles);
+    const missingPieces = exclusiveExpectedPieces.filter(p => !foundPieces.includes(p));
+    const isComplete = missingPieces.length === 0;
 
-    // If unpaired banners, mark as incomplete
-    if (folderBanners.length > pairCount) {
-      for (let i = pairCount; i < folderBanners.length; i++) {
-        multiFileGroups.push({
-          format: 'exclusive-desktop',
-          network: 'HP_EXCLUSIVE',
-          files: [folderBanners[i]],
-          complete: false,
-          requiredCount: 2,
-          roles: ['trigger', 'banner'],
-          folderPath: folderKey  // Store folder path for filtering
-        });
-      }
-    }
+    multiFileGroups.push({
+      format: 'exclusive',
+      network: 'HP_EXCLUSIVE',
+      files: files,
+      complete: isComplete,
+      requiredCount: exclusiveExpectedPieces.length,
+      roles: roles,
+      expectedPieces: exclusiveExpectedPieces,
+      foundPieces: foundPieces,
+      missingPieces: missingPieces,
+      folderPath: folderKey
+    });
   }
 
   return multiFileGroups;

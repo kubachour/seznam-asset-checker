@@ -5,7 +5,7 @@
 // GLOBAL STATE
 // =============================================================================
 
-const APP_VERSION = 'v1.5.23'; // Fix specs, tiers, navigation, and format mappings
+const APP_VERSION = 'v1.5.24'; // Add MobilFlip, fix Branding/Uncover detection, fix Exclusive composite
 
 // =============================================================================
 // SECURITY HELPERS

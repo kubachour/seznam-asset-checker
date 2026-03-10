@@ -38,7 +38,7 @@ function buildMedium(formatName, tier, network, dimensions = null) {
   }
 
   // Special formats that don't use tier
-  if (['branding', 'scratcher', 'uncover', 'spincube', 'interscroller', 'mobilni-interactive'].includes(formatName)) {
+  if (['branding', 'scratcher', 'uncover', 'spincube', 'mobilni-flip', 'interscroller', 'mobilni-interactive'].includes(formatName)) {
     return `${formatName}_selfpromo${tierLower ? '_' + tierLower : ''}`;
   }
 
