@@ -550,7 +550,7 @@ const FORMAT_SYSTEM_MAPPING = {
   'rectangle': ['ADFORM', 'ONEGAR', 'SKLIK'],
 
   // HTML5 banners - ADFORM, ONEGAR, SKLIK (NOT SOS for most)
-  'html5-banner': ['ADFORM', 'ONEGAR', 'SKLIK'],
+  'html5-banner': ['ADFORM', 'ONEGAR', 'SKLIK', 'HP_EXCLUSIVE'],
 
   // HP Exclusive formats (HP_EXCLUSIVE system only)
   'exclusive-desktop-trigger': ['HP_EXCLUSIVE'],
@@ -878,10 +878,10 @@ function findMatchingFormats(fileData, network = null, tier = null) {
       // Check if dimensions match
       if (!spec.dimensions.includes(fileData.dimensions)) continue;
 
-      // For multi-file formats, require detectedFormat to match
+      // For multi-file formats, require effective format to match (via includes)
       // This prevents random files with matching dimensions from being validated as compatible
       // Only files with the format keyword in name/folder should match multi-file specs
-      if (spec.multiFile && fileData.detectedFormat !== specKey) {
+      if (spec.multiFile && !specKey.includes(effectiveFormat || '')) {
         continue; // Skip this spec - file doesn't belong to this multi-file format
       }
 

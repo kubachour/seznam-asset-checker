@@ -5,7 +5,7 @@
 // GLOBAL STATE
 // =============================================================================
 
-const APP_VERSION = 'v1.5.29'; // Fix specKey matching regression for interscroller, inarticle, exclusive
+const APP_VERSION = 'v1.5.30'; // Fix Exclusive multiFile matching, allow HTML5 for HP_EXCLUSIVE, use effectiveFormat in validation
 
 // =============================================================================
 // SECURITY HELPERS
@@ -2258,8 +2258,9 @@ async function validateCompatibility() {
     const networks = getAllNetworks();
 
     for (const network of networks) {
-      // Check if format is allowed for this system
-      if (fileData.detectedFormat && !isFormatAllowedForSystem(fileData.detectedFormat, network)) {
+      // Check if format is allowed for this system (use assignedFormat from folder as fallback)
+      const effectiveFormat = fileData.assignedFormat || fileData.detectedFormat;
+      if (effectiveFormat && !isFormatAllowedForSystem(effectiveFormat, network)) {
         continue; // Skip validation for disallowed systems
       }
 
