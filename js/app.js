@@ -5,7 +5,7 @@
 // GLOBAL STATE
 // =============================================================================
 
-const APP_VERSION = 'v1.5.28'; // Fix format detection from folder path, add EXCLUSIVE variant, remove UAC auto-detect
+const APP_VERSION = 'v1.5.29'; // Fix specKey matching regression for interscroller, inarticle, exclusive
 
 // =============================================================================
 // SECURITY HELPERS

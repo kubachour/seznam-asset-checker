@@ -722,11 +722,11 @@ const PATH_FORMAT_PATTERNS = [
   // UAC patterns
   { pattern: 'uac', format: 'uac' },
 
-  // In-article patterns
-  { pattern: 'in-article', format: 'in-article' },
-  { pattern: 'in_article', format: 'in-article' },
-  { pattern: 'inarticle', format: 'in-article' },
-  { pattern: 'in article', format: 'in-article' },
+  // In-article patterns (format must match CREATIVE_SPECS key 'inarticle')
+  { pattern: 'in-article', format: 'inarticle' },
+  { pattern: 'in_article', format: 'inarticle' },
+  { pattern: 'inarticle', format: 'inarticle' },
+  { pattern: 'in article', format: 'inarticle' },
 
   // Kombi patterns
   { pattern: 'kombi', format: 'kombi' },
@@ -861,6 +861,7 @@ function findMatchingFormats(fileData, network = null, tier = null) {
       if (effectiveFormat &&
           effectiveFormat !== 'html5-banner' &&
           specKey !== effectiveFormat &&
+          !specKey.includes(effectiveFormat) &&
           !(effectiveFormat === 'uac' && specKey.startsWith('uac-'))) {
         continue;
       }
