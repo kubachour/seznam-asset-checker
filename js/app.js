@@ -5,7 +5,7 @@
 // GLOBAL STATE
 // =============================================================================
 
-const APP_VERSION = 'v1.5.25'; // Fix container ZIP extraction (nested HTML5 ZIPs), ignore OS junk in HTML5 validation
+const APP_VERSION = 'v1.5.28'; // Fix format detection from folder path, add EXCLUSIVE variant, remove UAC auto-detect
 
 // =============================================================================
 // SECURITY HELPERS
@@ -132,6 +132,15 @@ function getNetworkTooltip(network) {
 // =============================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Cache-busting: force reload when a new version is deployed
+  const storedVersion = sessionStorage.getItem('appVersion');
+  if (storedVersion && storedVersion !== APP_VERSION) {
+    sessionStorage.setItem('appVersion', APP_VERSION);
+    location.reload(true);
+    return;
+  }
+  sessionStorage.setItem('appVersion', APP_VERSION);
+
   console.log('Creative Validator initialized');
 
   // Display app version and link to GitHub release

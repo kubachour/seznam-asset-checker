@@ -31,7 +31,9 @@
       'cdnjs.cloudflare.com',
       'code.jquery.com',
       'cdn.jsdelivr.net',
-      'ajax.googleapis.com'
+      'ajax.googleapis.com',
+      'seznam.cz',
+      'zbozi.cz'
     ]
   };
 

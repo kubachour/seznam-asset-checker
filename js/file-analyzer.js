@@ -372,16 +372,6 @@ async function analyzeFile(file, folderPath = '') {
       analysis.height = dims.height;
       analysis.dimensions = `${dims.width}x${dims.height}`;
 
-      // UAC (Universal App Campaigns) dimension-based detection
-      // If dimensions match UAC formats and no other format detected, mark as UAC
-      const uacDimensions = ['1200x1200', '1200x1500', '1200x628'];
-      if (uacDimensions.includes(analysis.dimensions) && !analysis.detectedFormat) {
-        analysis.detectedFormat = 'uac';
-        analysis.detectedSystem = 'GOOGLE_ADS';
-        analysis.formatConfidence = 'medium';
-        analysis.formatSource = 'dimension';
-      }
-
       // Check color space for images
       const colorSpaceInfo = await checkColorSpace(file);
       analysis.colorSpace = colorSpaceInfo.colorSpace;

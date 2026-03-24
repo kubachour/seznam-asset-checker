@@ -840,11 +840,14 @@ function findMatchingFormats(fileData, network = null, tier = null) {
   const matches = [];
   const searchNetworks = network ? [network] : Object.keys(CREATIVE_SPECS);
 
+  // Use assignedFormat (from folder path) as fallback when detectedFormat (from filename) is absent
+  const effectiveFormat = fileData.assignedFormat || fileData.detectedFormat;
+
   // Filter networks based on detected format (if any)
   // This ensures format-specific files (e.g., spincube, spinner) only match their allowed systems
   let filteredNetworks = searchNetworks;
-  if (fileData.detectedFormat) {
-    const allowedSystems = getAllowedSystemsForFormat(fileData.detectedFormat);
+  if (effectiveFormat) {
+    const allowedSystems = getAllowedSystemsForFormat(effectiveFormat);
     filteredNetworks = searchNetworks.filter(net => allowedSystems.includes(net));
   }
 
@@ -852,13 +855,13 @@ function findMatchingFormats(fileData, network = null, tier = null) {
     const networkSpecs = CREATIVE_SPECS[netName];
 
     for (const [specKey, spec] of Object.entries(networkSpecs)) {
-      // If detected format exists and is not 'html5-banner', match only that specific specKey
+      // If effective format exists and is not 'html5-banner', match only that specific specKey
       // This prevents rich media formats (spincube, spinner, branding-scratcher) from matching wrong specs
-      // For UAC: if detectedFormat is 'uac', match any specKey starting with 'uac-'
-      if (fileData.detectedFormat &&
-          fileData.detectedFormat !== 'html5-banner' &&
-          specKey !== fileData.detectedFormat &&
-          !(fileData.detectedFormat === 'uac' && specKey.startsWith('uac-'))) {
+      // For UAC: if effectiveFormat is 'uac', match any specKey starting with 'uac-'
+      if (effectiveFormat &&
+          effectiveFormat !== 'html5-banner' &&
+          specKey !== effectiveFormat &&
+          !(effectiveFormat === 'uac' && specKey.startsWith('uac-'))) {
         continue;
       }
 
@@ -1238,7 +1241,7 @@ function getAllNetworks() {
  */
 function getNetworkVariants() {
   return {
-    HP_EXCLUSIVE: ['HP_EXCLUSIVE', 'HPEXCLUSIVE', 'HP EXCLUSIVE'],
+    HP_EXCLUSIVE: ['HP_EXCLUSIVE', 'HPEXCLUSIVE', 'HP EXCLUSIVE', 'EXCLUSIVE'],
     GOOGLE_ADS: ['GOOGLE_ADS', 'GOOGLE ADS', 'GADS', 'GOOGLEADS']
   };
 }
