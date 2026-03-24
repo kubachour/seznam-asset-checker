@@ -5,7 +5,7 @@
 // GLOBAL STATE
 // =============================================================================
 
-const APP_VERSION = 'v1.5.24'; // Add MobilFlip, fix Branding/Uncover detection, fix Exclusive composite
+const APP_VERSION = 'v1.5.25'; // Fix container ZIP extraction (nested HTML5 ZIPs), ignore OS junk in HTML5 validation
 
 // =============================================================================
 // SECURITY HELPERS
@@ -1725,8 +1725,10 @@ async function handleFileUpload(files) {
       console.log(`Detected standalone HTML file: ${file.name}`);
     } else if (fileType === FILE_TYPES.TYPES.ZIP) {
       // Check if this is an HTML5 banner ZIP
+      // Always verify ZIP actually contains HTML — name alone is not enough
+      // (e.g., "HTML5.zip" container with nested HTML5 ZIPs has no HTML files itself)
       const isHTML5 = typeof HTML5Validator !== 'undefined' &&
-        (HTML5Validator.isHTML5BannerByName(file.name) || await HTML5Validator.isHTML5ZIP(file));
+        await HTML5Validator.isHTML5ZIP(file);
 
       if (isHTML5) {
         // Keep HTML5 banners as whole files (don't extract)

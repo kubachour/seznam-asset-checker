@@ -78,7 +78,15 @@
    */
   async function validateZIPStructure(zip) {
     const issues = [];
-    const files = Object.keys(zip.files).filter(name => !zip.files[name].dir);
+    const files = Object.keys(zip.files).filter(name => {
+      if (zip.files[name].dir) return false;
+      // Skip OS junk files
+      const baseName = name.split('/').pop();
+      if (baseName.startsWith('.') || name.includes('__MACOSX')) return false;
+      const baseNameLower = baseName.toLowerCase();
+      if (baseNameLower === 'thumbs.db' || baseNameLower === 'desktop.ini') return false;
+      return true;
+    });
 
     // Check file count
     if (files.length > VALIDATION_RULES.maxFiles) {
